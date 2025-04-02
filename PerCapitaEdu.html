@@ -94,7 +94,7 @@
         .attr("height", pcHeight + pcMargin.top + pcMargin.bottom)
       .append("g")
         .attr("transform", "translate(" + pcMargin.left + "," + pcMargin.top + ")");
-    
+
     d3.text("WorldPopulationData.csv").then(function(rawText) {
       var lines = rawText.split("\n");
       var headerIndex = lines.findIndex(line => line.startsWith('"Country Name"'));
@@ -108,7 +108,7 @@
       var switzerland_long = population_cols.map(year => {
         return { Year: +year, Population: +switzRow[year] };
       });
-    
+
       d3.csv("SwissGovSpend.csv.csv").then(function(data) {
         // Filter for families and children spending (GF09, MCHF, S13)
         var FamChild = data.filter(d =>
@@ -132,7 +132,7 @@
           d.Population = match ? match.Population : null;
           d.PerCapita = (d.Population && d.Population !== 0) ? (d.VALUE / d.Population * 1000000) : 0;
         });
-    
+
         d3.csv("SwissInflationData.csv").then(function(infData) {
           infData.forEach(d => {
             d["Inflation Rate"] = +d["Inflation Rate"];
@@ -145,7 +145,7 @@
             d.inflationAdjusted = base_year_per_capita * Math.pow(1 + avg/100, d.PERIOD - minPeriod);
             d["Deviation by Percent"] = ((d.PerCapita - d.inflationAdjusted) / d.inflationAdjusted) * 100;
           });
-    
+
           var x = d3.scaleLinear()
               .domain(d3.extent(FamChild, d => d.PERIOD))
               .range([0, pcWidth]);
@@ -160,7 +160,7 @@
           var maxDev = d3.max(FamChild, d => d["Deviation by Percent"]);
           var color = d3.scaleSequential(d3.interpolateRdBu)
               .domain([maxDev, minDev]);
-    
+
           var minYear = x.domain()[0];
           var maxYear = x.domain()[1];
           var yearsArray = d3.range(minYear, maxYear + 1);
@@ -170,7 +170,7 @@
               .tickFormat(function(d) { 
                     return "'" + String(d % 100).padStart(2, '0');
                   }); 
-    
+
           pcSvg.append("g")
              .attr("class", "x axis")
              .attr("transform", "translate(0," + pcHeight + ")")
@@ -182,7 +182,7 @@
                .style("text-anchor", "middle")
                .style("font-size", "18px")
                .text("Year");
-    
+
           var yAxis = d3.axisLeft(y);
           pcSvg.append("g")
              .attr("class", "y axis")
@@ -197,7 +197,7 @@
                .text("Spending on Education Per Capita (CHF)");
     
           function animatePerCapita(){
-    
+            // Remove only animated elements (preserve axes)
             pcSvg.selectAll(".perCapitaCircle").remove();
             pcSvg.selectAll(".inflationLine").remove();
     
@@ -211,23 +211,23 @@
                     .attr("fill", d => color(d["Deviation by Percent"]))
                     .attr("stroke", "#333")
                     .attr("stroke-width", 1)
+                    .attr("pointer-events", "all")  // Ensure hover events work even if circles are small
                     .on("mouseover", function(event, d) {
-                        tooltip.transition().duration(200).style("opacity", 0.9);
-                        tooltip.html("<strong>Year:</strong> " + d.PERIOD +
+                        d3.select("#tooltip").transition().duration(200).style("opacity", 0.9);
+                        d3.select("#tooltip").html("<strong>Year:</strong> " + d.PERIOD +
                                     "<br/><strong>Per Capita:</strong> " + d.PerCapita.toFixed(2) +
                                     "<br/><strong>Deviation:</strong> " + d["Deviation by Percent"].toFixed(2) + "%")
                                 .style("left", (event.pageX + 10) + "px")
                                 .style("top", (event.pageY - 28) + "px");
                     })
                     .on("mouseout", function() {
-                        tooltip.transition().duration(500).style("opacity", 0);
+                        d3.select("#tooltip").transition().duration(500).style("opacity", 0);
                     })
                 .transition()
                     .duration(3000)
                     .ease(d3.easeCubic)
                     .attr("r", d => r(d.PerCapita));
     
-            // Sort data by year for the line path
             FamChild.sort((a, b) => a.PERIOD - b.PERIOD);
             var line = d3.line()
                 .x(d => x(d.PERIOD))
@@ -248,86 +248,92 @@
                 .transition()
                     .duration(3000)
                     .ease(d3.easeCubic)
-                    .attr("stroke-dashoffset", 0);
+                    .attr("stroke-dashoffset", 0)
+                    .on("end", function() {
+                        // After the animation, set the dash array to a dashed pattern
+                        d3.select(this).attr("stroke-dasharray", "5,5");
+                    });
           }
     
           d3.select("#perCapitaPlayBtn").on("click", animatePerCapita);
-          animatePerCapita()
+          animatePerCapita();
     
           // Legend Area
           var legend = pcSvg.append("g")
-          .attr("class", "legend")
-          .attr("transform", "translate(" + (pcWidth - 220) + ",200)");
-      legend.append("line")
-          .attr("x1", 0)
-          .attr("y1", 0)
-          .attr("x2", 20)
-          .attr("y2", 0)
-          .attr("stroke", "blue")
-          .attr("stroke-dasharray", "5,5")
-          .attr("stroke-width", 2);
-      legend.append("text")
-          .attr("x", 25)
-          .attr("y", 5)
-          .text("Predicted Inflation Adjusted Per Capita Spending")
-          .style("font-size", "12px")
-          .attr("alignment-baseline", "middle");
+            .attr("class", "legend")
+            .attr("transform", "translate(" + (pcWidth - 220) + ",200)");
+          legend.append("line")
+            .attr("x1", 0)
+            .attr("y1", 0)
+            .attr("x2", 20)
+            .attr("y2", 0)
+            .attr("stroke", "blue")
+            .attr("stroke-dasharray", "5,5")
+            .attr("stroke-width", 2);
+          legend.append("text")
+            .attr("x", 25)
+            .attr("y", 5)
+            .text("Predicted Inflation Adjusted Per Capita Spending")
+            .style("font-size", "12px")
+            .attr("alignment-baseline", "middle");
     
-      // Legend for circle colors as a continuous scale
-      var legendMargin = { top: 10, right: 0, bottom: 20, left: 0 },
-          legendWidth = 150,
-          legendHeight = 10;
+          // Legend for circle colors as a continuous scale
+          var legendMargin = { top: 10, right: 0, bottom: 20, left: 0 },
+              legendWidth = 150,
+              legendHeight = 10;
     
-      var colorLegendGroup = legend.append("g")
-          .attr("transform", "translate(0,30)");
+          var colorLegendGroup = legend.append("g")
+              .attr("transform", "translate(0,30)");
     
-      var defs = pcSvg.append("defs");
-      var gradient = defs.append("linearGradient")
-          .attr("id", "legend-gradient")
-          .attr("x1", "0%")
-          .attr("x2", "100%")
-          .attr("y1", "0%")
-          .attr("y2", "0%");
+          var defs = pcSvg.append("defs");
+          var gradient = defs.append("linearGradient")
+              .attr("id", "legend-gradient")
+              .attr("x1", "0%")
+              .attr("x2", "100%")
+              .attr("y1", "0%")
+              .attr("y2", "0%");
     
-      var stops = [
-          {offset: "0%", color: color(maxDev)},
-          {offset: "25%", color: color(maxDev - 0.25 * (maxDev - minDev))},
-          {offset: "50%", color: color((maxDev + minDev) / 2)},
-          {offset: "75%", color: color(minDev + 0.25 * (maxDev - minDev))},
-          {offset: "100%", color: color(minDev)}
-      ];
-      gradient.selectAll("stop")
-          .data(stops)
-          .enter().append("stop")
-          .attr("offset", d => d.offset)
-          .attr("stop-color", d => d.color);
+          var stops = [
+              {offset: "0%", color: color(maxDev)},
+              {offset: "25%", color: color(maxDev - 0.25 * (maxDev - minDev))},
+              {offset: "50%", color: color((maxDev + minDev) / 2)},
+              {offset: "75%", color: color(minDev + 0.25 * (maxDev - minDev))},
+              {offset: "100%", color: color(minDev)}
+          ];
+          gradient.selectAll("stop")
+              .data(stops)
+              .enter().append("stop")
+              .attr("offset", d => d.offset)
+              .attr("stop-color", d => d.color);
     
-      colorLegendGroup.append("rect")
-          .attr("width", legendWidth)
-          .attr("height", legendHeight)
-          .style("fill", "url(#legend-gradient)");
+          colorLegendGroup.append("rect")
+              .attr("width", legendWidth)
+              .attr("height", legendHeight)
+              .style("fill", "url(#legend-gradient)");
     
-      var legendScale = d3.scaleLinear()
-          .domain([maxDev, minDev])
-          .range([0, legendWidth]);
+          var legendScale = d3.scaleLinear()
+              .domain([maxDev, minDev])
+              .range([0, legendWidth]);
     
-      var legendAxis = d3.axisBottom(legendScale)
-          .ticks(5)
-          .tickFormat(d3.format(".1f"));
+          var legendAxis = d3.axisBottom(legendScale)
+              .ticks(5)
+              .tickFormat(d3.format(".1f"));
     
-      colorLegendGroup.append("g")
-          .attr("class", "legend axis")
-          .attr("transform", "translate(0," + legendHeight + ")")
-          .call(legendAxis);
+          colorLegendGroup.append("g")
+              .attr("class", "legend axis")
+              .attr("transform", "translate(0," + legendHeight + ")")
+              .call(legendAxis);
     
-      colorLegendGroup.append("text")
-          .attr("x", 0)
-          .attr("y", -5)
-          .text("Deviation by Percent")
-          .style("font-size", "12px");
+          colorLegendGroup.append("text")
+              .attr("x", 0)
+              .attr("y", -5)
+              .text("Deviation by Percent")
+              .style("font-size", "12px");
+    
         });
       });
     });
   </script>
 </body>
+
 </html>
