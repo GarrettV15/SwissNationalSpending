@@ -1,21 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
-  <title>Swiss Gov Spending – Drill-Down Treemap</title>
+  <title>Swiss Government Spending Dashboard</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body {
-      font-family: sans-serif;
       margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f9;
+      color: #333;
     }
 
-    #chart {
-      width: 960px;
-      height: 600px;
-      margin: auto;
-      position: relative;
+    header {
+      background: #4f6bed;
+      color: white;
+      padding: 1rem 2rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      font-weight: 300;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    #chart, #animated-treemap {
+      display: flex;
+      justify-content: center;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1rem;
     }
 
     .tooltip {
@@ -27,47 +72,77 @@
       pointer-events: none;
       opacity: 0;
       border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      z-index: 100;
     }
 
-    text {
-      font-size: 13px;
-      fill: white;
-      font-weight: bold;
-      text-shadow: 1px 1px 2px black;
-      pointer-events: none;
+    #playPauseBtn {
+      padding: 5px 12px;
+      border: none;
+      background: #4f6bed;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #playPauseBtn:hover {
+      background: #3a50c4;
+    }
+
+    input[type="range"] {
+      width: 300px;
     }
 
     .back-button {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: #f0f0f0;
-      border: none;
-      padding: 6px 10px;
+      margin-bottom: 1rem;
+      padding: 6px 12px;
       font-size: 14px;
       cursor: pointer;
-      display: none;
+      border: none;
+      background: #ddd;
+      border-radius: 4px;
+    }
+
+    .back-button:hover {
+      background: #ccc;
+    }
+
+    svg {
+      max-width: 100%;
+      height: auto;
     }
   </style>
 </head>
-
 <body>
-  <h2 style="text-align:center;">Swiss Government Spending (S13, 2022)</h2>
-  <div style="text-align:center; margin-bottom: 10px;">
-    <button class="back-button" id="backBtn" style="display:none;">← Back</button>
-  </div>
-  <div id="chart">
-    <div class="tooltip" id="tooltip"></div>
+  <header>
+    <h1>Swiss Government Spending Dashboard</h1>
+    <p>Visualizing functional expenditure over time</p>
+  </header>
+
+  <div class="container">
+
+    <div class="card">
+      <h2>Interactive Treemap (Drill Down)</h2>
+      <div style="text-align: center;">
+        <button class="back-button" id="backBtn" style="display: none;">← Back</button>
+      </div>
+      <div id="chart"></div>
+    </div>
+
+    <div class="card">
+      <h2>Spending by Year (Animated Treemap)</h2>
+      <div id="animated-treemap"></div>
+      <div class="controls">
+        <input type="range" id="yearSlider" min="0" step="1">
+        <span id="yearLabel"></span>
+        <button id="playPauseBtn">Play</button>
+      </div>
+    </div>
+
   </div>
 
-  <h2 style="text-align:center;">Swiss Government Spending (S13) Over Time</h2>
-  <div id="animated-treemap"></div>
-  <div style="text-align:center; margin-top: 10px;">
-    <input type="range" id="yearSlider" min="0" step="1" style="width: 60%;" />
-    <span id="yearLabel"></span>
-    <button id="playPauseBtn">Play</button>
-  </div>
+  <!-- Tooltip shared by both charts -->
+  <div class="tooltip" id="tooltip"></div>
 
   <script>
     const width = 960, height = 600;
