@@ -2,20 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Swiss Gov Spending (S13, 2022)</title>
+  <title>Swiss Gov Spending – Drill-Down Treemap</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-    }
-
-    #chart {
-      width: 960px;
-      height: 600px;
-      margin: auto;
-    }
-
+    body { font-family: sans-serif; margin: 0; }
+    #chart { width: 960px; height: 600px; margin: auto; position: relative; }
     .tooltip {
       position: absolute;
       background: white;
@@ -27,94 +18,228 @@
       border-radius: 4px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
-
     text {
-      font-size: 16px;
+      font-size: 13px;
       fill: white;
       font-weight: bold;
       text-shadow: 1px 1px 2px black;
       pointer-events: none;
     }
+    .back-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: #f0f0f0;
+      border: none;
+      padding: 6px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <h2 style="text-align:center;">Swiss Government Spending (S13, 2022) – Top COFOG Categories</h2>
-  <div id="chart"></div>
+  <h2 style="text-align:center;">Swiss Government Spending (S13, 2022)</h2>
+  <div id="chart">
+    <button class="back-button" id="backBtn">← Back</button>
+  </div>
   <div class="tooltip" id="tooltip"></div>
 
   <script>
-    const width = 960;
-    const height = 600;
-
-    const svg = d3.select("#chart")
-      .append("svg")
+    const width = 960, height = 600;
+    const svg = d3.select("#chart").append("svg")
       .attr("width", width)
       .attr("height", height);
-
     const tooltip = d3.select("#tooltip");
+    const backBtn = d3.select("#backBtn");
+
+    let fullData, rootNode;
+
+    // === COFOG Labels ===
+    const labels = {
+      "GF01": "General public services",
+      "GF0101": "Executive and legislative organs, financial and fiscal affairs, external affairs",
+      "GF0102": "Foreign economic aid",
+      "GF0103": "General services",
+      "GF0104": "Basic research",
+      "GF0105": "R&D General public services",
+      "GF0106": "General public services n.e.c.",
+      "GF0107": "Public debt transactions",
+      "GF0108": "Transfers of a general character between different levels of government",
+      "GF02": "Defence",
+      "GF0201": "Military defence",
+      "GF0202": "Civil defence",
+      "GF0203": "Foreign military aid",
+      "GF0204": "R&D Defence",
+      "GF0205": "Defence n.e.c.",
+      "GF03": "Public order and safety",
+      "GF0301": "Police services",
+      "GF0302": "Fire-protection services",
+      "GF0303": "Law courts",
+      "GF0304": "Prisons",
+      "GF0305": "R&D Public order and safety",
+      "GF0306": "Public order and safety n.e.c.",
+      "GF04": "Economic affairs",
+      "GF0401": "General economic, commercial and labour affairs",
+      "GF0402": "Agriculture, forestry, fishing and hunting",
+      "GF0403": "Fuel and energy",
+      "GF0404": "Mining, manufacturing and construction",
+      "GF0405": "Transport",
+      "GF0406": "Communication",
+      "GF0407": "Other industries",
+      "GF0408": "R&D Economic affairs",
+      "GF0409": "Economic affairs n.e.c.",
+      "GF05": "Environmental protection",
+      "GF0501": "Waste management",
+      "GF0502": "Waste water management",
+      "GF0503": "Pollution abatement",
+      "GF0504": "Protection of biodiversity and landscape",
+      "GF0505": "R&D Environmental protection",
+      "GF0506": "Environmental protection n.e.c.",
+      "GF06": "Housing and community amenities",
+      "GF0601": "Housing development",
+      "GF0602": "Community development",
+      "GF0603": "Water supply",
+      "GF0604": "Street lighting",
+      "GF0605": "R&D Housing and community amenities",
+      "GF0606": "Housing and community amenities n.e.c.",
+      "GF07": "Health",
+      "GF0701": "Medical products, appliances and equipment",
+      "GF0702": "Outpatient services",
+      "GF0703": "Hospital services",
+      "GF0704": "Public health services",
+      "GF0705": "R&D Health",
+      "GF0706": "Health n.e.c.",
+      "GF08": "Recreation, culture and religion",
+      "GF0801": "Recreational and sporting services",
+      "GF0802": "Cultural services",
+      "GF0803": "Broadcasting and publishing services",
+      "GF0804": "Religious and other community services",
+      "GF0805": "R&D Recreation, culture and religion",
+      "GF0806": "Recreation, culture and religion n.e.c.",
+      "GF09": "Education",
+      "GF0901": "Pre-primary and primary education",
+      "GF0902": "Secondary education",
+      "GF0903": "Post-secondary non-tertiary education",
+      "GF0904": "Tertiary education",
+      "GF0905": "Education not definable by level",
+      "GF0906": "Subsidiary services to education",
+      "GF0907": "R&D Education",
+      "GF0908": "Education n.e.c.",
+      "GF10": "Social protection",
+      "GF1001": "Sickness and disability",
+      "GF1002": "Old age",
+      "GF1003": "Survivors",
+      "GF1004": "Family and children",
+      "GF1005": "Unemployment",
+      "GF1006": "Housing",
+      "GF1007": "Social exclusion n.e.c.",
+      "GF1008": "R&D Social protection",
+      "GF1009": "Social protection n.e.c."
+    };
 
     d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(data => {
       const filtered = data.filter(d =>
         d.SECTOR === "S13" &&
         d.PERIOD === 2022 &&
         d.UNIT_MEAS === "MCHF" &&
-        /^GF\d{2}$/.test(d.COFOG)
+        /^GF\d{2}(\d{2})?$/.test(d.COFOG)
       );
 
-      const labels = {
-        "GF01": "General public services",
-        "GF02": "Defence",
-        "GF03": "Public order and safety",
-        "GF04": "Economic affairs",
-        "GF05": "Environmental protection",
-        "GF06": "Housing and community amenities",
-        "GF07": "Health",
-        "GF08": "Recreation, culture and religion",
-        "GF09": "Education",
-        "GF10": "Social protection"
+      const tree = { name: "Swiss Gov Spending (S13)", children: [] };
+      const mainMap = new Map();
+
+      for (const row of filtered) {
+        const cofog = row.COFOG;
+        const value = +row.VALUE;
+        const main = cofog.slice(0, 4);
+
+        if (!mainMap.has(main)) {
+          mainMap.set(main, { name: labels[main] || main, cofog: main, children: [] });
+        }
+
+        if (cofog.length === 6) {
+          mainMap.get(main).children.push({
+            name: labels[cofog] || cofog,
+            value: value
+          });
+        }
+      }
+
+      mainMap.forEach((val, key) => {
+        if (val.children.length === 0) {
+          const match = filtered.find(d => d.COFOG === key);
+          if (match) val.value = match.VALUE;
+        }
+      });
+
+      tree.children = Array.from(mainMap.values());
+
+      fullData = tree;
+
+      const topOnly = {
+        name: "Swiss Gov Spending (S13)",
+        children: tree.children.map(d => ({
+          name: d.name,
+          value: d.value || d.children.reduce((a, b) => a + b.value, 0),
+          raw: d
+        }))
       };
 
-      // Sort descending to put largest left-most
-      filtered.sort((a, b) => b.VALUE - a.VALUE);
+      rootNode = d3.hierarchy(topOnly).sum(d => d.value);
+      drawTreemap(rootNode, false);
+    });
 
-      const root = d3.hierarchy({
-        name: "Swiss Gov Spending",
-        children: filtered.map(d => ({
-          name: labels[d.COFOG] || d.COFOG,
-          value: d.VALUE
-        }))
-      }).sum(d => d.value);
+    function drawTreemap(root, isSubLevel) {
+  svg.selectAll("*").remove();
 
-      d3.treemap()
-        .size([width, height])
-        .padding(2)(root);
+  // Sort nodes descending so largest is on the left
+  root.sort((a, b) => b.value - a.value);
 
-      const color = d3.scaleOrdinal()
-        .domain(root.leaves().map(d => d.data.name))
-        .range(d3.schemeCategory10);
+  d3.treemap()
+    .size([width, height])
+    .padding(2)(root);
 
-      const nodes = svg.selectAll("g")
-        .data(root.leaves())
-        .enter()
-        .append("g")
-        .attr("transform", d => `translate(${d.x0},${d.y0})`);
+  const color = d3.scaleOrdinal(d3.schemeTableau10)
+    .domain(root.leaves().map(d => d.data.name));
 
-      nodes.append("rect")
-        .attr("width", d => d.x1 - d.x0)
-        .attr("height", d => d.y1 - d.y0)
-        .attr("fill", d => color(d.data.name))
-        .on("mousemove", (event, d) => {
-          tooltip.style("left", (event.pageX + 10) + "px")
-                 .style("top", (event.pageY - 20) + "px")
-                 .style("opacity", 1)
-                 .html(`<strong>${d.data.name}</strong><br>${d.value.toLocaleString()} MCHF`);
-        })
-        .on("mouseout", () => tooltip.style("opacity", 0));
+  const nodes = svg.selectAll("g")
+    .data(root.leaves())
+    .join("g")
+    .attr("transform", d => `translate(${d.x0},${d.y0})`);
 
-      nodes.append("text")
-        .attr("x", 6)
-        .attr("y", 20)
-        .text(d => d.data.name);
+  nodes.append("rect")
+    .attr("width", d => d.x1 - d.x0)
+    .attr("height", d => d.y1 - d.y0)
+    .attr("fill", d => color(d.data.name))
+    .on("mousemove", (event, d) => {
+      tooltip.style("left", (event.pageX + 10) + "px")
+             .style("top", (event.pageY - 20) + "px")
+             .style("opacity", 1)
+             .html(`<strong>${d.data.name}</strong><br>${d.value.toLocaleString()} MCHF`);
+    })
+    .on("mouseout", () => tooltip.style("opacity", 0))
+    .on("click", (event, d) => {
+      if (!isSubLevel && d.data.raw && d.data.raw.children) {
+        const subRoot = d3.hierarchy({
+          name: d.data.name,
+          children: d.data.raw.children
+        }).sum(d => d.value);
+        drawTreemap(subRoot, true);
+        backBtn.style("display", "inline-block");
+      }
+    });
+
+  nodes.append("text")
+    .attr("x", 6)
+    .attr("y", 18)
+    .text(d => d.data.name);
+}
+
+
+    backBtn.on("click", () => {
+      drawTreemap(rootNode, false);
+      backBtn.style("display", "none");
     });
   </script>
 </body>
