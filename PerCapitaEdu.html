@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Swiss Government Spending Dashboard - Part 2</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f9;
+      color: #333;
+    }
+    header {
+      background: #4f6bed;
+      color: white;
+      padding: 1rem 2rem;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+    header p {
+      margin-top: 0.5rem;
+      font-weight: 300;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .tooltip {
+      position: absolute;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 8px;
+      font-size: 14px;
+      pointer-events: none;
+      opacity: 0;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      z-index: 100;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Swiss Government Spending Dashboard</h1>
+    <p>Visualizing functional expenditure over time</p>
+  </header>
+
+  <div class="container">
+    <!-- Per Capita Spending Graph -->
+    <div class="card">
+      <h2 style="text-align:center;">Per Capita Spending on Education of All Levels</h2>
+      <div id="perCapitaChart"></div>
+      <div style="text-align: center; margin-top: 10px;">
+        <button id="perCapitaPlayBtn">Play Animation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared Tooltip -->
+  <div class="tooltip" id="tooltip"></div>
+
+  <!-- Script for Per Capita Spending Graph -->
+  <script>
+    var pcMargin = { top: 60, right: 100, bottom: 50, left: 60 },
+        pcWidth  = 800 - pcMargin.left - pcMargin.right,
+        pcHeight = 500 - pcMargin.top - pcMargin.bottom;
+    var pcSvg = d3.select("#perCapitaChart")
+      .append("svg")
+        .attr("width", pcWidth + pcMargin.left + pcMargin.right)
+        .attr("height", pcHeight + pcMargin.top + pcMargin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + pcMargin.left + "," + pcMargin.top + ")");
+    
+    d3.text("WorldPopulationData.csv").then(function(rawText) {
+      var lines = rawText.split("\n");
+      var headerIndex = lines.findIndex(line => line.startsWith('"Country Name"'));
+      var csvText = lines.slice(headerIndex).join("\n");
+      var worldData = d3.csvParse(csvText);
+      var switzRow = worldData.filter(d => d["Country Name"] === "Switzerland")[0];
+      var population_cols = [];
+      for (var y = 1995; y < 2024; y++) {
+        population_cols.push(String(y));
+      }
+      var switzerland_long = population_cols.map(year => {
+        return { Year: +year, Population: +switzRow[year] };
+      });
+    
+      d3.csv("SwissGovSpend.csv.csv").then(function(data) {
+        // Filter for families and children spending (GF09, MCHF, S13)
+        var FamChild = data.filter(d =>
+          d['COFOG'] === "GF09" &&
+          d['UNIT_MEAS'] === "MCHF" &&
+          d['SECTOR'] === "S13"
+        );
+        FamChild.forEach(d => {
+          d.PERIOD = +d.PERIOD;
+          d.VALUE = +d.VALUE;
+        });
+        FamChild.sort((a, b) => a.PERIOD - b.PERIOD);
+        for (var i = 1; i < FamChild.length; i++) {
+          var prev = FamChild[i - 1].VALUE;
+          var curr = FamChild[i].VALUE;
+          FamChild[i].PercentageChange = ((curr - prev) / prev) * 100;
+        }
+        FamChild[0].PercentageChange = 0;
+        FamChild.forEach(d => {
+          var match = switzerland_long.find(s => s.Year === d.PERIOD);
+          d.Population = match ? match.Population : null;
+          d.PerCapita = (d.Population && d.Population !== 0) ? (d.VALUE / d.Population * 1000000) : 0;
+        });
+    
+        d3.csv("SwissInflationData.csv").then(function(infData) {
+          infData.forEach(d => {
+            d["Inflation Rate"] = +d["Inflation Rate"];
+          });
+          var avg = d3.median(infData, d => d["Inflation Rate"]);
+          var minPeriod = d3.min(FamChild, d => d.PERIOD);
+          var base_year_record = FamChild.find(d => d.PERIOD === minPeriod);
+          var base_year_per_capita = base_year_record ? base_year_record.PerCapita : 0;
+          FamChild.forEach(d => {
+            d.inflationAdjusted = base_year_per_capita * Math.pow(1 + avg/100, d.PERIOD - minPeriod);
+            d["Deviation by Percent"] = ((d.PerCapita - d.inflationAdjusted) / d.inflationAdjusted) * 100;
+          });
+    
+          var x = d3.scaleLinear()
+              .domain(d3.extent(FamChild, d => d.PERIOD))
+              .range([0, pcWidth]);
+          var y = d3.scaleLinear()
+              .domain([0, d3.max(FamChild, d => Math.max(d.PerCapita, d.inflationAdjusted))])
+              .range([pcHeight, 0])
+              .nice();
+          var r = d3.scaleSqrt()
+              .domain(d3.extent(FamChild, d => d.PerCapita))
+              .range([2, 10]);
+          var minDev = d3.min(FamChild, d => d["Deviation by Percent"]);
+          var maxDev = d3.max(FamChild, d => d["Deviation by Percent"]);
+          var color = d3.scaleSequential(d3.interpolateRdBu)
+              .domain([maxDev, minDev]);
+    
+          var minYear = x.domain()[0];
+          var maxYear = x.domain()[1];
+          var yearsArray = d3.range(minYear, maxYear + 1);
+              
+          var xAxis = d3.axisBottom(x)
+              .tickValues(yearsArray)      
+              .tickFormat(function(d) { 
+                    return "'" + String(d % 100).padStart(2, '0');
+                  }); 
+    
+          pcSvg.append("g")
+             .attr("class", "x axis")
+             .attr("transform", "translate(0," + pcHeight + ")")
+             .call(xAxis)
+             .append("text")
+               .attr("x", pcWidth / 2)
+               .attr("y", 40)
+               .attr("fill", "#000")
+               .style("text-anchor", "middle")
+               .style("font-size", "18px")
+               .text("Year");
+    
+          var yAxis = d3.axisLeft(y);
+          pcSvg.append("g")
+             .attr("class", "y axis")
+             .call(yAxis)
+             .append("text")
+               .attr("transform", "rotate(-90)")
+               .attr("x", -pcHeight / 2)
+               .attr("y", -40)
+               .attr("fill", "#000")
+               .style("text-anchor", "middle")
+               .style("font-size", "18px")
+               .text("Spending on Education Per Capita (CHF)");
+    
+          function animatePerCapita(){
+    
+            pcSvg.selectAll(".perCapitaCircle").remove();
+            pcSvg.selectAll(".inflationLine").remove();
+    
+            pcSvg.selectAll("circle")
+                .data(FamChild)
+                .enter().append("circle")
+                    .attr("class", "perCapitaCircle")
+                    .attr("cx", d => x(d.PERIOD))
+                    .attr("cy", d => y(d.PerCapita))
+                    .attr("r", 0)  // Start with radius 0
+                    .attr("fill", d => color(d["Deviation by Percent"]))
+                    .attr("stroke", "#333")
+                    .attr("stroke-width", 1)
+                    .on("mouseover", function(event, d) {
+                        tooltip.transition().duration(200).style("opacity", 0.9);
+                        tooltip.html("<strong>Year:</strong> " + d.PERIOD +
+                                    "<br/><strong>Per Capita:</strong> " + d.PerCapita.toFixed(2) +
+                                    "<br/><strong>Deviation:</strong> " + d["Deviation by Percent"].toFixed(2) + "%")
+                                .style("left", (event.pageX + 10) + "px")
+                                .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        tooltip.transition().duration(500).style("opacity", 0);
+                    })
+                .transition()
+                    .duration(3000)
+                    .ease(d3.easeCubic)
+                    .attr("r", d => r(d.PerCapita));
+    
+            // Sort data by year for the line path
+            FamChild.sort((a, b) => a.PERIOD - b.PERIOD);
+            var line = d3.line()
+                .x(d => x(d.PERIOD))
+                .y(d => y(d.inflationAdjusted));
+    
+            var linePath = pcSvg.append("path")
+                .datum(FamChild)
+                .attr("class", "inflationLine")
+                .attr("fill", "none")
+                .attr("stroke", "blue")
+                .attr("stroke-width", 2)
+                .attr("d", line);
+    
+            var totalLength = linePath.node().getTotalLength();
+            linePath
+                .attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition()
+                    .duration(3000)
+                    .ease(d3.easeCubic)
+                    .attr("stroke-dashoffset", 0);
+          }
+    
+          d3.select("#perCapitaPlayBtn").on("click", animatePerCapita);
+    
+          // Legend Area
+          var legend = pcSvg.append("g")
+          .attr("class", "legend")
+          .attr("transform", "translate(" + (pcWidth - 220) + ",200)");
+      legend.append("line")
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", 20)
+          .attr("y2", 0)
+          .attr("stroke", "blue")
+          .attr("stroke-dasharray", "5,5")
+          .attr("stroke-width", 2);
+      legend.append("text")
+          .attr("x", 25)
+          .attr("y", 5)
+          .text("Predicted Inflation Adjusted Per Capita Spending")
+          .style("font-size", "12px")
+          .attr("alignment-baseline", "middle");
+    
+      // Legend for circle colors as a continuous scale
+      var legendMargin = { top: 10, right: 0, bottom: 20, left: 0 },
+          legendWidth = 150,
+          legendHeight = 10;
+    
+      var colorLegendGroup = legend.append("g")
+          .attr("transform", "translate(0,30)");
+    
+      var defs = pcSvg.append("defs");
+      var gradient = defs.append("linearGradient")
+          .attr("id", "legend-gradient")
+          .attr("x1", "0%")
+          .attr("x2", "100%")
+          .attr("y1", "0%")
+          .attr("y2", "0%");
+    
+      var stops = [
+          {offset: "0%", color: color(maxDev)},
+          {offset: "25%", color: color(maxDev - 0.25 * (maxDev - minDev))},
+          {offset: "50%", color: color((maxDev + minDev) / 2)},
+          {offset: "75%", color: color(minDev + 0.25 * (maxDev - minDev))},
+          {offset: "100%", color: color(minDev)}
+      ];
+      gradient.selectAll("stop")
+          .data(stops)
+          .enter().append("stop")
+          .attr("offset", d => d.offset)
+          .attr("stop-color", d => d.color);
+    
+      colorLegendGroup.append("rect")
+          .attr("width", legendWidth)
+          .attr("height", legendHeight)
+          .style("fill", "url(#legend-gradient)");
+    
+      var legendScale = d3.scaleLinear()
+          .domain([maxDev, minDev])
+          .range([0, legendWidth]);
+    
+      var legendAxis = d3.axisBottom(legendScale)
+          .ticks(5)
+          .tickFormat(d3.format(".1f"));
+    
+      colorLegendGroup.append("g")
+          .attr("class", "legend axis")
+          .attr("transform", "translate(0," + legendHeight + ")")
+          .call(legendAxis);
+    
+      colorLegendGroup.append("text")
+          .attr("x", 0)
+          .attr("y", -5)
+          .text("Deviation by Percent")
+          .style("font-size", "12px");
+        });
+      });
+    });
+  </script>
+</body>
+</html>
