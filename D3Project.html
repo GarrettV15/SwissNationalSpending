@@ -12,30 +12,25 @@
       background: #f4f6f9;
       color: #333;
     }
-
     header {
       background: #4f6bed;
       color: white;
       padding: 1rem 2rem;
       text-align: center;
     }
-
     header h1 {
       margin: 0;
       font-size: 2rem;
     }
-
     header p {
       margin-top: 0.5rem;
       font-weight: 300;
     }
-
     .container {
       max-width: 1200px;
       margin: 2rem auto;
       padding: 0 1rem;
     }
-
     .card {
       background: white;
       border-radius: 8px;
@@ -43,20 +38,16 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       margin-bottom: 2rem;
     }
-
     .card h2 {
       margin-top: 0;
       font-size: 1.5rem;
       margin-bottom: 1rem;
       text-align: center;
     }
-
-    #chart,
-    #animated-treemap {
+    #chart, #animated-treemap, #perCapitaChart {
       display: flex;
       justify-content: center;
     }
-
     .controls {
       display: flex;
       justify-content: center;
@@ -64,7 +55,6 @@
       gap: 1rem;
       margin-top: 1rem;
     }
-
     .tooltip {
       position: absolute;
       background: white;
@@ -77,7 +67,6 @@
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       z-index: 100;
     }
-
     #playPauseBtn {
       padding: 5px 12px;
       border: none;
@@ -86,15 +75,12 @@
       border-radius: 4px;
       cursor: pointer;
     }
-
     #playPauseBtn:hover {
       background: #3a50c4;
     }
-
     input[type="range"] {
       width: 300px;
     }
-
     .year-select-row {
       display: flex;
       align-items: center;
@@ -138,7 +124,6 @@
       margin-bottom: 0.5rem;
       padding: 4px;
     }
-
     svg {
       max-width: 100%;
       height: auto;
@@ -153,7 +138,7 @@
   </header>
 
   <div class="container">
-
+    <!-- Interactive Treemap (Drill Down) -->
     <div class="card">
       <h2>Government Spending by Year</h2>
       <div class="treemap-container">
@@ -170,9 +155,6 @@
 
     </div>
 
-
-
-
     <div class="card">
       <h2>Spending by Year (Animated Treemap)</h2>
       <div id="animated-treemap"></div>
@@ -183,14 +165,29 @@
       </div>
     </div>
 
+    <!-- Per Capita Spending Graph -->
+    <div class="card">
+      <h2 style="text-align:center;">Per Capita Spending on Education of All Levels</h2>
+      <div id="perCapitaChart"></div>
+      <div style="text-align: center; margin-top: 10px;">
+        <button id="perCapitaPlayBtn">Play Animation</button>
+    </div>
   </div>
 
-  <!-- Tooltip shared by both charts -->
+  <!-- Shared Tooltip -->
   <div class="tooltip" id="tooltip"></div>
 
+  <!-- Script for Interactive Treemap -->
   <script>
-    const width = 1100, height = 500;
+    const width = 960, height = 600;
+    const svg = d3.select("#chart").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+    const tooltip = d3.select("#tooltip");
+    const backBtn = d3.select("#backBtn");
+    let fullData, rootNode;
 
+    // COFOG Labels
     const labels = {
       "GF01": "General public services",
       "GF0101": "Executive and legislative organs, financial and fiscal affairs, external affairs",
@@ -462,17 +459,12 @@
     const treemapHeight = 500;
 
     const treemapSvg = d3.select("#animated-treemap")
-      .append("div")
-      .style("display", "flex")
-      .style("justify-content", "center")
       .append("svg")
       .attr("width", treemapWidth)
       .attr("height", treemapHeight);
 
-    const treemapTooltip = d3.select("body")
-      .append("div")
-      .attr("class", "tooltip")
-      .style("opacity", 0);
+    // Reuse the global tooltip
+    const treemapTooltip = d3.select("#tooltip");
 
     d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(data => {
       const filtered = data.filter(d =>
@@ -480,10 +472,8 @@
         d.UNIT_MEAS === "MCHF" &&
         /^GF\d{2}$/.test(d.COFOG)
       );
-
       const nested = d3.group(filtered, d => d.PERIOD);
       const years = Array.from(nested.keys()).sort((a, b) => a - b);
-
       animationDataByYear = years.map(year => {
         const values = nested.get(year);
         const children = values.map(d => ({
@@ -494,7 +484,7 @@
         return { year, children };
       });
 
-      // Init slider
+      // Initialize slider
       const slider = d3.select("#yearSlider")
         .attr("max", years.length - 1)
         .on("input", function () {
@@ -523,18 +513,14 @@
     function drawAnimatedTreemap(dataObj) {
       d3.select("#yearLabel").text(dataObj.year);
       treemapSvg.selectAll("*").remove();
-
       const root = d3.hierarchy({ name: "root", children: dataObj.children })
         .sum(d => d.value)
         .sort((a, b) => b.value - a.value);
-
       d3.treemap().size([treemapWidth, treemapHeight]).padding(2)(root);
-
       const nodes = treemapSvg.selectAll("g")
         .data(root.leaves())
         .join("g")
         .attr("transform", d => `translate(${d.x0},${d.y0})`);
-
       nodes.append("rect")
         .attr("width", d => d.x1 - d.x0)
         .attr("height", d => d.y1 - d.y0)
@@ -543,11 +529,8 @@
           const percent = (d.value / root.value * 100).toFixed(1);
           const tooltipWidth = 180, tooltipHeight = 50;
           let [pageX, pageY] = [event.pageX, event.pageY];
-          const screenW = window.innerWidth, screenH = window.innerHeight;
-
-          if (pageX + tooltipWidth > screenW) pageX -= tooltipWidth + 20;
-          if (pageY + tooltipHeight > screenH) pageY -= tooltipHeight + 20;
-
+          if (pageX + tooltipWidth > window.innerWidth) pageX -= tooltipWidth + 20;
+          if (pageY + tooltipHeight > window.innerHeight) pageY -= tooltipHeight + 20;
           treemapTooltip
             .style("left", `${pageX + 10}px`)
             .style("top", `${pageY - 20}px`)
@@ -555,8 +538,6 @@
             .html(`<strong>${d.data.name}</strong><br>${d.value.toLocaleString()} MCHF<br>${percent}%`);
         })
         .on("mouseout", () => treemapTooltip.style("opacity", 0));
-
-      // Centered labels if big enough
       nodes.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
         .append("text")
         .attr("text-anchor", "middle")
@@ -566,7 +547,6 @@
         .attr("font-size", "15px")
         // .style("text-shadow", "1px 1px 2px black")
         .text(d => d.data.name);
-
       nodes.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
         .append("text")
         .attr("text-anchor", "middle")
@@ -579,6 +559,259 @@
     }
   </script>
 
-</body>
+  <script>
+    var pcMargin = { top: 60, right: 100, bottom: 50, left: 60 },
+        pcWidth  = 800 - pcMargin.left - pcMargin.right,
+        pcHeight = 500 - pcMargin.top - pcMargin.bottom;
+    var pcSvg = d3.select("#perCapitaChart")
+      .append("svg")
+        .attr("width", pcWidth + pcMargin.left + pcMargin.right)
+        .attr("height", pcHeight + pcMargin.top + pcMargin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + pcMargin.left + "," + pcMargin.top + ")");
 
+
+    d3.text("WorldPopulationData.csv").then(function(rawText) {
+      var lines = rawText.split("\n");
+      var headerIndex = lines.findIndex(line => line.startsWith('"Country Name"'));
+      var csvText = lines.slice(headerIndex).join("\n");
+      var worldData = d3.csvParse(csvText);
+      var switzRow = worldData.filter(d => d["Country Name"] === "Switzerland")[0];
+      var population_cols = [];
+      for (var y = 1995; y < 2024; y++) {
+        population_cols.push(String(y));
+      }
+      var switzerland_long = population_cols.map(year => {
+        return { Year: +year, Population: +switzRow[year] };
+      });
+
+      d3.csv("SwissGovSpend.csv.csv").then(function(data) {
+        // Filter for families and children spending (GF09, MCHF, S13)
+        var FamChild = data.filter(d =>
+          d['COFOG'] === "GF09" &&
+          d['UNIT_MEAS'] === "MCHF" &&
+          d['SECTOR'] === "S13"
+        );
+        FamChild.forEach(d => {
+          d.PERIOD = +d.PERIOD;
+          d.VALUE = +d.VALUE;
+        });
+        FamChild.sort((a, b) => a.PERIOD - b.PERIOD);
+        for (var i = 1; i < FamChild.length; i++) {
+          var prev = FamChild[i - 1].VALUE;
+          var curr = FamChild[i].VALUE;
+          FamChild[i].PercentageChange = ((curr - prev) / prev) * 100;
+        }
+        FamChild[0].PercentageChange = 0;
+        FamChild.forEach(d => {
+          var match = switzerland_long.find(s => s.Year === d.PERIOD);
+          d.Population = match ? match.Population : null;
+          d.PerCapita = (d.Population && d.Population !== 0) ? (d.VALUE / d.Population * 1000000) : 0;
+        });
+
+        d3.csv("SwissInflationData.csv").then(function(infData) {
+          infData.forEach(d => {
+            d["Inflation Rate"] = +d["Inflation Rate"];
+          });
+          var avg = d3.median(infData, d => d["Inflation Rate"]);
+          var minPeriod = d3.min(FamChild, d => d.PERIOD);
+          var base_year_record = FamChild.find(d => d.PERIOD === minPeriod);
+          var base_year_per_capita = base_year_record ? base_year_record.PerCapita : 0;
+          FamChild.forEach(d => {
+            d.inflationAdjusted = base_year_per_capita * Math.pow(1 + avg/100, d.PERIOD - minPeriod);
+            d["Deviation by Percent"] = ((d.PerCapita - d.inflationAdjusted) / d.inflationAdjusted) * 100;
+          });
+
+          var x = d3.scaleLinear()
+              .domain(d3.extent(FamChild, d => d.PERIOD))
+              .range([0, pcWidth]);
+          var y = d3.scaleLinear()
+              .domain([0, d3.max(FamChild, d => Math.max(d.PerCapita, d.inflationAdjusted))])
+              .range([pcHeight, 0])
+              .nice();
+          var r = d3.scaleSqrt()
+              .domain(d3.extent(FamChild, d => d.PerCapita))
+              .range([2, 10]);
+          var minDev = d3.min(FamChild, d => d["Deviation by Percent"]);
+          var maxDev = d3.max(FamChild, d => d["Deviation by Percent"]);
+          var color = d3.scaleSequential(d3.interpolateRdBu)
+              .domain([maxDev, minDev]);
+
+            var minYear = x.domain()[0];
+            var maxYear = x.domain()[1];
+            var yearsArray = d3.range(minYear, maxYear + 1);
+              
+            var xAxis = d3.axisBottom(x)
+                .tickValues(yearsArray)      
+                .tickFormat(function(d) { 
+                    return "'" + String(d % 100).padStart(2, '0');
+                  }); 
+
+          pcSvg.append("g")
+             .attr("class", "x axis")
+             .attr("transform", "translate(0," + pcHeight + ")")
+             .call(xAxis)
+             .append("text")
+               .attr("x", pcWidth / 2)
+               .attr("y", 40)
+               .attr("fill", "#000")
+               .style("text-anchor", "middle")
+               .style("font-size", "18px")
+               .text("Year");
+
+          var yAxis = d3.axisLeft(y);
+          pcSvg.append("g")
+             .attr("class", "y axis")
+             .call(yAxis)
+             .append("text")
+               .attr("transform", "rotate(-90)")
+               .attr("x", -pcHeight / 2)
+               .attr("y", -40)
+               .attr("fill", "#000")
+               .style("text-anchor", "middle")
+               .style("font-size", "18px")
+               .text("Spending on Education Per Capita (CHF)");
+
+        function animatePerCapita(){
+
+            pcSvg.selectAll(".perCapitaCircle").remove();
+            pcSvg.selectAll(".inflationLine").remove();
+
+            pcSvg.selectAll("circle")
+                .data(FamChild)
+                .enter().append("circle")
+                    .attr("class", "perCapitaCircle")
+                    .attr("cx", d => x(d.PERIOD))
+                    .attr("cy", d => y(d.PerCapita))
+                    .attr("r", 0)  // Start with radius 0
+                    .attr("fill", d => color(d["Deviation by Percent"]))
+                    .attr("stroke", "#333")
+                    .attr("stroke-width", 1)
+                    .on("mouseover", function(event, d) {
+                        tooltip.transition().duration(200).style("opacity", 0.9);
+                        tooltip.html("<strong>Year:</strong> " + d.PERIOD +
+                                    "<br/><strong>Per Capita:</strong> " + d.PerCapita.toFixed(2) +
+                                    "<br/><strong>Deviation:</strong> " + d["Deviation by Percent"].toFixed(2) + "%")
+                                .style("left", (event.pageX + 10) + "px")
+                                .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        tooltip.transition().duration(500).style("opacity", 0);
+                    })
+                .transition()
+                    .duration(3000)
+                    .ease(d3.easeCubic)
+                    .attr("r", d => r(d.PerCapita));
+
+            // Sort data by year for the line path
+            FamChild.sort((a, b) => a.PERIOD - b.PERIOD);
+            var line = d3.line()
+                .x(d => x(d.PERIOD))
+                .y(d => y(d.inflationAdjusted));
+
+            var linePath = pcSvg.append("path")
+                .datum(FamChild)
+                .attr("class", "inflationLine")
+                .attr("fill", "none")
+                .attr("stroke", "blue")
+                .attr("stroke-width", 2)
+                .attr("d", line);
+
+            var totalLength = linePath.node().getTotalLength();
+            linePath
+                .attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition()
+                    .duration(3000)
+                    .ease(d3.easeCubic)
+                    .attr("stroke-dashoffset", 0);
+        }
+
+        d3.select("#perCapitaPlayBtn").on("click", animatePerCapita);
+
+          // Legend Area
+          var legend = pcSvg.append("g")
+          .attr("class", "legend")
+          .attr("transform", "translate(" + (pcWidth - 220) + ",200)");
+      legend.append("line")
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", 20)
+          .attr("y2", 0)
+          .attr("stroke", "blue")
+          .attr("stroke-dasharray", "5,5")
+          .attr("stroke-width", 2);
+      legend.append("text")
+          .attr("x", 25)
+          .attr("y", 5)
+          .text("Predicted Inflation Adjusted Per Capita Spending")
+          .style("font-size", "12px")
+          .attr("alignment-baseline", "middle");
+
+      // Legend for circle colors as a continuous scale
+      // Define dimensions for the color scale legend
+      var legendMargin = { top: 10, right: 0, bottom: 20, left: 0 },
+          legendWidth = 150,
+          legendHeight = 10;
+
+      // Create a legend group positioned below the predicted line legend
+      var colorLegendGroup = legend.append("g")
+          .attr("transform", "translate(0,30)");
+
+      // Append defs and a linearGradient element to pcSvg if not already defined
+      var defs = pcSvg.append("defs");
+      var gradient = defs.append("linearGradient")
+          .attr("id", "legend-gradient")
+          .attr("x1", "0%")
+          .attr("x2", "100%")
+          .attr("y1", "0%")
+          .attr("y2", "0%");
+
+      // Create gradient stops sampling the color scale at 0%, 25%, 50%, 75%, and 100%
+      var stops = [
+          {offset: "0%", color: color(maxDev)},
+          {offset: "25%", color: color(maxDev - 0.25 * (maxDev - minDev))},
+          {offset: "50%", color: color((maxDev + minDev) / 2)},
+          {offset: "75%", color: color(minDev + 0.25 * (maxDev - minDev))},
+          {offset: "100%", color: color(minDev)}
+      ];
+      gradient.selectAll("stop")
+          .data(stops)
+          .enter().append("stop")
+          .attr("offset", d => d.offset)
+          .attr("stop-color", d => d.color);
+
+      // Append a rectangle filled with the gradient
+      colorLegendGroup.append("rect")
+          .attr("width", legendWidth)
+          .attr("height", legendHeight)
+          .style("fill", "url(#legend-gradient)");
+
+      // Create a scale for the legend axis with the same domain as the color scale
+      var legendScale = d3.scaleLinear()
+          .domain([maxDev, minDev])
+          .range([0, legendWidth]);
+
+      // Create an axis for the legend scale
+      var legendAxis = d3.axisBottom(legendScale)
+          .ticks(5)
+          .tickFormat(d3.format(".1f"));
+
+      // Append the legend axis below the gradient rect
+      colorLegendGroup.append("g")
+          .attr("class", "legend axis")
+          .attr("transform", "translate(0," + legendHeight + ")")
+          .call(legendAxis);
+
+      // Add a label for the continuous color scale
+      colorLegendGroup.append("text")
+          .attr("x", 0)
+          .attr("y", -5)
+          .text("Deviation by Percent")
+          .style("font-size", "12px")
+        });
+      });
+    });
+  </script>
+</body>
 </html>
