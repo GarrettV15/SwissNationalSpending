@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Swiss Government Spending Dashboard</title>
@@ -50,7 +51,8 @@
       text-align: center;
     }
 
-    #chart, #animated-treemap {
+    #chart,
+    #animated-treemap {
       display: flex;
       justify-content: center;
     }
@@ -72,7 +74,7 @@
       pointer-events: none;
       opacity: 0;
       border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       z-index: 100;
     }
 
@@ -93,18 +95,48 @@
       width: 300px;
     }
 
-    .back-button {
-      margin-bottom: 1rem;
-      padding: 6px 12px;
-      font-size: 14px;
-      cursor: pointer;
-      border: none;
-      background: #ddd;
-      border-radius: 4px;
+    .year-select-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    .back-button:hover {
-      background: #ccc;
+    .back-button-inline {
+      padding: 4px 10px;
+      font-size: 13px;
+      background: #e0e0e0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .back-button-inline:hover {
+      background: #d5d5d5;
+    }
+
+
+    .treemap-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .treemap-container select {
+      padding: 6px 10px;
+      font-size: 14px;
+      margin-top: 0.5rem;
+    }
+
+    #chartSingle svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+
+    select {
+      margin-bottom: 0.5rem;
+      padding: 4px;
     }
 
     svg {
@@ -113,6 +145,7 @@
     }
   </style>
 </head>
+
 <body>
   <header>
     <h1>Swiss Government Spending Dashboard</h1>
@@ -122,12 +155,23 @@
   <div class="container">
 
     <div class="card">
-      <h2>Interactive Treemap (Drill Down)</h2>
-      <div style="text-align: center;">
-        <button class="back-button" id="backBtn" style="display: none;">← Back</button>
+      <h2>Government Spending by Year</h2>
+      <div class="treemap-container">
+        <div class="year-select-row">
+          <label for="yearSelectSingle"><strong>Select Year:</strong></label>
+          <select id="yearSelectSingle"></select>
+          <button class="back-button-inline" id="backBtnSingle" style="display: none;">← Back</button>
+        </div>
+
+
+        <button class="back-button" id="backBtnSingle" style="display: none;">← Back</button>
+        <div id="chartSingle"></div>
       </div>
-      <div id="chart"></div>
+
     </div>
+
+
+
 
     <div class="card">
       <h2>Spending by Year (Animated Treemap)</h2>
@@ -145,16 +189,8 @@
   <div class="tooltip" id="tooltip"></div>
 
   <script>
-    const width = 960, height = 600;
-    const svg = d3.select("#chart").append("svg")
-      .attr("width", width)
-      .attr("height", height);
-    const tooltip = d3.select("#tooltip");
-    const backBtn = d3.select("#backBtn");
+    const width = 1100, height = 500;
 
-    let fullData, rootNode;
-
-    // === COFOG Labels ===
     const labels = {
       "GF01": "General public services",
       "GF0101": "Executive and legislative organs, financial and fiscal affairs, external affairs",
@@ -237,150 +273,174 @@
       "GF1009": "Social protection n.e.c."
     };
 
+    const sectorColors = {
+      "GF01": "#e74c3c",
+      "GF02": "#1abc9c",
+      "GF03": "#ff6384",
+      "GF04": "#9b59b6",
+      "GF05": "#f39c12",
+      "GF06": "#2ecc71",
+      "GF07": "#f39c6b",
+      "GF08": "#b5e48c",
+      "GF09": "#1abc9c",
+      "GF10": "#4f6bed"
+    };
+
+
     d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(data => {
-      const filtered = data.filter(d =>
-        d.SECTOR === "S13" &&
-        d.PERIOD === 2020 &&
-        d.UNIT_MEAS === "MCHF" &&
-        /^GF\d{2}(\d{2})?$/.test(d.COFOG)
-      );
+      const years = Array.from(new Set(data.map(d => d.PERIOD))).sort();
+      const select = d3.select("#yearSelectSingle");
 
-      const tree = { name: "Swiss Gov Spending (S13)", children: [] };
-      const mainMap = new Map();
+      select.selectAll("option")
+        .data(years)
+        .join("option")
+        .attr("value", d => d)
+        .text(d => d);
 
-      for (const row of filtered) {
-        const cofog = row.COFOG;
-        const value = +row.VALUE;
-        const main = cofog.slice(0, 4);
-
-        if (!mainMap.has(main)) {
-          mainMap.set(main, { name: labels[main] || main, cofog: main, children: [] });
-        }
-
-        if (cofog.length === 6) {
-          mainMap.get(main).children.push({
-            name: labels[cofog] || cofog,
-            value: value
-          });
-        }
-      }
-
-      mainMap.forEach((val, key) => {
-        if (val.children.length === 0) {
-          const match = filtered.find(d => d.COFOG === key);
-          if (match) val.value = match.VALUE;
-        }
+      select.on("change", function () {
+        createSingleTreemap(+this.value);
       });
 
-      tree.children = Array.from(mainMap.values());
-
-      fullData = tree;
-
-      const topOnly = {
-        name: "Swiss Gov Spending (S13)",
-        children: tree.children.map(d => ({
-          name: d.name,
-          value: d.value || d.children.reduce((a, b) => a + b.value, 0),
-          raw: d
-        }))
-      };
-
-      rootNode = d3.hierarchy(topOnly).sum(d => d.value);
-      drawTreemap(rootNode, false);
+      // Initial render
+      createSingleTreemap(2022);
     });
 
-    function drawTreemap(root, isSubLevel) {
-      svg.selectAll("*").remove();
+    function createSingleTreemap(year) {
+      const container = d3.select("#chartSingle");
+      container.selectAll("*").remove();
 
-      root.sort((a, b) => b.value - a.value);
+      const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height);
 
-      d3.treemap().size([width, height]).padding(2)(root);
+      const backBtn = d3.select("#backBtnSingle");
+      let rootNode;
 
-      const color = d3.scaleOrdinal(d3.schemeTableau10)
-        .domain(root.leaves().map(d => d.data.name));
+      d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(raw => {
+        const filtered = raw.filter(d => d.SECTOR === "S13" && d.PERIOD === year);
 
-      const nodes = svg.selectAll("g")
-        .data(root.leaves())
-        .join("g")
-        .attr("transform", d => `translate(${d.x0},${d.y0})`);
+        const combined = d3.rollup(
+          filtered,
+          v => Object.fromEntries(v.map(d => [d.UNIT_MEAS, d.VALUE])),
+          d => d.COFOG
+        );
 
-      nodes.append("rect")
-        .attr("width", d => d.x1 - d.x0)
-        .attr("height", d => d.y1 - d.y0)
-        .attr("fill", d => color(d.data.name))
-        .on("mousemove", (event, d) => {
-          const tooltipWidth = 200;  // approximate max width
-          const tooltipHeight = 50;  // approximate height
+        const tree = { name: `Swiss Gov Spending ${year}`, children: [] };
+        const mainMap = new Map();
 
-          const [mouseX, mouseY] = d3.pointer(event);
-          const pageX = event.pageX;
-          const pageY = event.pageY;
-
-          const screenW = window.innerWidth;
-          const screenH = window.innerHeight;
-
-          let left = pageX + 15;
-          let top = pageY - 30;
-
-          // Adjust if too close to right edge
-          if (left + tooltipWidth > screenW) {
-            left = pageX - tooltipWidth - 15;
+        for (const [cofog, measures] of combined.entries()) {
+          if (!/^GF\d{2}(\d{2})?$/.test(cofog)) continue;
+          const main = cofog.slice(0, 4);
+          if (!mainMap.has(main)) {
+            mainMap.set(main, {
+              name: labels[main] || main,
+              cofog: main,
+              children: []
+            });
           }
 
-          // Adjust if too close to bottom edge
-          if (top + tooltipHeight > screenH) {
-            top = pageY - tooltipHeight - 15;
+          const node = {
+            name: labels[cofog] || cofog,
+            value: measures["MCHF"],
+            share: measures["SHARE"] || 0
+          };
+
+          if (cofog.length === 6) {
+            mainMap.get(main).children.push({ ...node, cofog });
+          } else {
+            mainMap.get(main).value = node.value;
+            mainMap.get(main).share = node.share;
           }
+        }
 
-          tooltip
-            .style("left", `${left}px`)
-            .style("top", `${top}px`)
-            .style("opacity", 1)
-            .html(`<strong>${d.data.name}</strong><br>${d.value.toLocaleString()} MCHF`);
-        })
+        tree.children = Array.from(mainMap.values());
+        const topOnly = {
+          name: tree.name,
+          children: tree.children.map(d => ({
+            name: d.name,
+            value: d.value || d.children.reduce((sum, c) => sum + c.value, 0),
+            share: d.share,
+            raw: d
+          }))
+        };
 
-        .on("mouseout", () => tooltip.style("opacity", 0))
-        .on("click", (event, d) => {
-          if (!isSubLevel && d.data.raw && d.data.raw.children) {
-            const subRoot = d3.hierarchy({
-              name: d.data.name,
-              children: d.data.raw.children
-            }).sum(d => d.value);
-            drawTreemap(subRoot, true);
-            backBtn.style("display", "inline-block");
-          }
-        });
+        rootNode = d3.hierarchy(topOnly).sum(d => d.value);
+        drawSingleTreemap(svg, rootNode, false);
+      });
 
-      // Two lines of text: title and value
-      // Add a <g> for centered label (2 lines)
-      nodes.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
-        .append("g")
-        .attr("transform", d => {
-          const centerX = (d.x1 - d.x0) / 2;
-          const centerY = (d.y1 - d.y0) / 2 - 8;
-          return `translate(${centerX}, ${centerY})`;
-        })
-        .attr("text-anchor", "middle")
-        .selectAll("text")
-        .data(d => [d.data.name, `${d.value.toLocaleString()} MCHF`])
-        .join("text")
-        .attr("y", (d, i) => i * 16)
-        .text(d => d)
-        .attr("fill", "white")
-        .attr("font-size", "13px")
-        .style("pointer-events", "none")
-        .style("text-shadow", "1px 1px 2px black");
+      function drawSingleTreemap(svg, root, isSubLevel) {
+        svg.selectAll("*").remove();
+        root.sort((a, b) => b.value - a.value);
+        d3.treemap().size([width, height]).padding(2)(root);
 
+        const nodes = svg.selectAll("g")
+          .data(root.leaves())
+          .join("g")
+          .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+        nodes.append("rect")
+          .attr("width", d => d.x1 - d.x0)
+          .attr("height", d => d.y1 - d.y0)
+          .attr("fill", d => {
+            let cofogCode = isSubLevel
+              ? d.ancestors().find(a => a.depth === 1)?.data?.cofog
+              : d.data?.raw?.cofog;
+            const base = sectorColors[cofogCode?.slice(0, 4)];
+            if (!base) return "#ccc";
+
+            if (isSubLevel && d.data?.share !== undefined) {
+              const baseHSL = d3.hsl(base);
+              const share = d.data.share;
+              const minL = 0.05, maxL = 0.95;
+              baseHSL.l = maxL - (share / 100) * (maxL - minL);
+              return baseHSL.formatHex();
+            }
+
+            return base;
+          })
+          .on("mouseout", () => d3.select("#tooltip").style("opacity", 0))
+          .on("click", (event, d) => {
+            if (!isSubLevel && d.data.raw && d.data.raw.children) {
+              const subRoot = d3.hierarchy({
+                name: d.data.name,
+                children: d.data.raw.children
+              }).sum(d => d.value);
+              drawSingleTreemap(svg, subRoot, true);
+              backBtn.style("display", "inline-block");
+            }
+          });
+
+        nodes.filter(d => (d.x1 - d.x0) > 80 && (d.y1 - d.y0) > 60)
+          .append("g")
+          .attr("text-anchor", "middle")
+          .attr("transform", d => `translate(${(d.x1 - d.x0) / 2}, ${(d.y1 - d.y0) / 2 - 16})`)
+          .selectAll("text")
+          .data(d => [
+            d.data.name,
+            `${d.value.toLocaleString()} MCHF`,
+            `${((d.value / root.value) * 100).toFixed(1)}% of total`
+          ])
+          .join("text")
+          .attr("y", (d, i) => i * 16)
+          .attr("fill", "black")
+          .attr("font-size", "15px")
+          .style("pointer-events", "none")
+          //.style("text-shadow", "1px 1px 2px black")
+          .text(d => d);
+      }
+
+      backBtn.on("click", () => {
+        createSingleTreemap(+document.getElementById("yearSelectSingle").value);
+        backBtn.style("display", "none");
+      });
     }
-
-
-    backBtn.on("click", () => {
-      drawTreemap(rootNode, false);
-      backBtn.style("display", "none");
-    });
   </script>
 
+
+
+
   <script>
+
     const cofogLabels = {
       'GF01': 'Public services', 'GF02': 'Defence', 'GF03': 'Safety',
       'GF04': 'Economic', 'GF05': 'Environment', 'GF06': 'Housing',
@@ -398,8 +458,8 @@
     let animationTimer = null;
     let currentYearIndex = 0;
     let animationDataByYear = [];
-    const treemapWidth = 960;
-    const treemapHeight = 600;
+    const treemapWidth = 1100;
+    const treemapHeight = 500;
 
     const treemapSvg = d3.select("#animated-treemap")
       .append("div")
@@ -452,7 +512,7 @@
             currentYearIndex = (currentYearIndex + 1) % animationDataByYear.length;
             slider.property("value", currentYearIndex);
             drawAnimatedTreemap(animationDataByYear[currentYearIndex]);
-          }, 600);
+          }, 400);
           d3.select("#playPauseBtn").text("Pause");
         }
       });
@@ -502,9 +562,9 @@
         .attr("text-anchor", "middle")
         .attr("x", d => (d.x1 - d.x0) / 2)
         .attr("y", d => (d.y1 - d.y0) / 2 - 8)
-        .attr("fill", "white")
-        .attr("font-size", "13px")
-        .style("text-shadow", "1px 1px 2px black")
+        .attr("fill", "black")
+        .attr("font-size", "15px")
+        // .style("text-shadow", "1px 1px 2px black")
         .text(d => d.data.name);
 
       nodes.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
@@ -512,9 +572,9 @@
         .attr("text-anchor", "middle")
         .attr("x", d => (d.x1 - d.x0) / 2)
         .attr("y", d => (d.y1 - d.y0) / 2 + 10)
-        .attr("fill", "white")
-        .attr("font-size", "12px")
-        .style("text-shadow", "1px 1px 2px black")
+        .attr("fill", "black")
+        .attr("font-size", "15px")
+        // .style("text-shadow", "1px 1px 2px black")
         .text(d => `${d.value.toLocaleString()} MCHF`);
     }
   </script>
