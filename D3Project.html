@@ -1,451 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Swiss National Spending</title>
-  <!-- D3 -->
+  <meta charset="UTF-8">
+  <title>Swiss Gov Spending (S13, 2022)</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <!-- Font Awesome (for icons) -->
-  <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
-
   <style>
-    /* Global resets */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
     body {
-      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-      background-color: #f7f4f8; /* Soft pastel background */
-      display: flex; /* For sidebar + main layout */
-      color: #333;
+      font-family: sans-serif;
+      margin: 0;
     }
 
-    /* Sidebar styling */
-    .sidebar {
-      width: 70px;
-      background-color: #fff;
-      border-right: 1px solid #eee;
-      padding: 20px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .sidebar .sidebar-icon {
-      width: 40px;
-      height: 40px;
-      margin: 20px 0;
-      color: #999;
-      cursor: pointer;
-      transition: color 0.3s;
-    }
-    .sidebar .sidebar-icon:hover {
-      color: #555;
+    #chart {
+      width: 960px;
+      height: 600px;
+      margin: auto;
     }
 
-    /* Main content area */
-    .main-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: auto;
-    }
-
-    /* Header */
-    header {
-      background-color: #fff;
-      padding: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    header h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #1f1f1f;
-    }
-
-    /* COFOG category section */
-    .cofog-section {
-      background-color: #fafafa;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .cofog-heading {
-      font-size: 1.2rem;
-      font-weight: 500;
-      margin-left: 10px;
-    }
-    .cofog-icons {
-      display: flex;
-      justify-content: start;
-      align-items: center;
-      gap: 30px;
-      padding: 0 10px;
-    }
-    .cofog-icon {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-decoration: none;
-      color: #333;
-      width: 60px;
-    }
-    .cofog-icon i {
-      font-size: 2rem;
-      margin-bottom: 5px;
-      color: #757575;
-    }
-    .cofog-icon span {
-      font-size: 0.8rem;
-      text-align: center;
-    }
-
-    /* Charts section */
-    .charts-section {
-      padding: 20px;
-    }
-    .charts-heading {
-      font-size: 1.2rem;
-      font-weight: 500;
-      margin-bottom: 10px;
-    }
-    .chart-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 40px;
-      margin-top: 20px;
-    }
-    .chart-container {
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .chart-container h2 {
-      margin-bottom: 15px;
-      font-size: 1rem;
-      font-weight: 500;
-      text-align: center;
-    }
-    .chart {
-      width: 100%;
-      height: 400px;
-    }
-
-    /* Tooltip */
     .tooltip {
       position: absolute;
+      background: white;
+      border: 1px solid #ccc;
       padding: 8px;
-      font-size: 0.9rem;
-      background: rgba(0,0,0,0.7);
-      color: #fff;
-      border-radius: 4px;
+      font-size: 14px;
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.2s ease-in-out;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
 
-    /* Responsive: stack charts for smaller screens */
-    @media (min-width: 768px) {
-      .chart-grid {
-        grid-template-columns: 1fr 1fr 1fr; /* 3 columns if you want them side by side */
-      }
+    text {
+      font-size: 16px;
+      fill: white;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px black;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <!-- Example icons for the sidebar; you can add more or change them -->
-    <i class="fas fa-home sidebar-icon" title="Home"></i>
-    <i class="fas fa-chart-line sidebar-icon" title="Charts"></i>
-    <i class="fas fa-globe sidebar-icon" title="Global"></i>
-    <i class="fas fa-cog sidebar-icon" title="Settings"></i>
-  </aside>
-
-  <!-- Main Content -->
-  <div class="main-content">
-    <!-- Header -->
-    <header>
-      <h1>Swiss National Spending</h1>
-    </header>
-
-    <!-- COFOG Icons Section -->
-    <section class="cofog-section">
-      <div class="cofog-heading">COFOG Categories</div>
-      <div class="cofog-icons">
-        <!-- Placeholder icons & labels -->
-        <a href="#" class="cofog-icon">
-          <i class="fas fa-user-shield"></i>
-          <span>Public Service</span>
-        </a>
-        <a href="#" class="cofog-icon">
-          <i class="fas fa-shield-alt"></i>
-          <span>Defense</span>
-        </a>
-        <a href="#" class="cofog-icon">
-          <i class="fas fa-home"></i>
-          <span>Housing</span>
-        </a>
-        <a href="#" class="cofog-icon">
-          <i class="fas fa-heart"></i>
-          <span>Health</span>
-        </a>
-        <a href="#" class="cofog-icon">
-          <i class="fas fa-graduation-cap"></i>
-          <span>Education</span>
-        </a>
-        <a href="#" class="cofog-icon">
-          <i class="fas fa-gavel"></i>
-          <span>Public Order</span>
-        </a>
-        <a href="#" class="cofog-icon">
-          <i class="fas fa-football-ball"></i>
-          <span>Recreation</span>
-        </a>
-      </div>
-    </section>
-
-    <!-- Charts Section -->
-    <section class="charts-section">
-      <div class="charts-heading">Statistical Graphs</div>
-      <div class="chart-grid">
-        <!-- Government Spending -->
-        <div class="chart-container">
-          <h2>Government Spending</h2>
-          <svg id="govSpendChart" class="chart"></svg>
-        </div>
-
-        <!-- Inflation Data -->
-        <div class="chart-container">
-          <h2>Inflation Data</h2>
-          <svg id="inflationChart" class="chart"></svg>
-        </div>
-
-        <!-- World Population -->
-        <div class="chart-container">
-          <h2>World Population</h2>
-          <svg id="worldPopChart" class="chart"></svg>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <!-- Tooltip for all charts -->
+  <h2 style="text-align:center;">Swiss Government Spending (S13, 2022) – Top COFOG Categories</h2>
+  <div id="chart"></div>
   <div class="tooltip" id="tooltip"></div>
 
   <script>
-    /*******************
-     * Common settings *
-     *******************/
+    const width = 960;
+    const height = 600;
+
+    const svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
     const tooltip = d3.select("#tooltip");
-    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
-    const chartWidth = 400;  // Adjust as needed
-    const chartHeight = 400;
 
-    /********************************
-     * 1) Government Spending Chart *
-     ********************************/
-    d3.csv("SwissGovSpend.csv").then(data => {
-      // Convert numeric fields
-      data.forEach(d => {
-        d.Year = +d.Year;
-        d.Spending = +d.Spending;
-      });
+    d3.csv("ts-x-04.02.04.03.csv", d3.autoType).then(data => {
+      const filtered = data.filter(d =>
+        d.SECTOR === "S13" &&
+        d.PERIOD === 2022 &&
+        d.UNIT_MEAS === "MCHF" &&
+        /^GF\d{2}$/.test(d.COFOG)
+      );
 
-      const svg = d3.select("#govSpendChart")
-                    .attr("width", chartWidth + margin.left + margin.right)
-                    .attr("height", chartHeight + margin.top + margin.bottom)
-                    .append("g")
-                    .attr("transform", `translate(${margin.left},${margin.top})`);
+      const labels = {
+        "GF01": "General public services",
+        "GF02": "Defence",
+        "GF03": "Public order and safety",
+        "GF04": "Economic affairs",
+        "GF05": "Environmental protection",
+        "GF06": "Housing and community amenities",
+        "GF07": "Health",
+        "GF08": "Recreation, culture and religion",
+        "GF09": "Education",
+        "GF10": "Social protection"
+      };
 
-      // Scales
-      const x = d3.scaleBand()
-                  .domain(data.map(d => d.Year))
-                  .range([0, chartWidth])
-                  .padding(0.2);
+      // Sort descending to put largest left-most
+      filtered.sort((a, b) => b.VALUE - a.VALUE);
 
-      const y = d3.scaleLinear()
-                  .domain([0, d3.max(data, d => d.Spending)])
-                  .range([chartHeight, 0])
-                  .nice();
+      const root = d3.hierarchy({
+        name: "Swiss Gov Spending",
+        children: filtered.map(d => ({
+          name: labels[d.COFOG] || d.COFOG,
+          value: d.VALUE
+        }))
+      }).sum(d => d.value);
 
-      // Axes
-      svg.append("g")
-         .attr("transform", `translate(0,${chartHeight})`)
-         .call(d3.axisBottom(x).tickFormat(d3.format("d")))
-         .selectAll("text")
-         .attr("transform", "rotate(-45)")
-         .style("text-anchor", "end");
+      d3.treemap()
+        .size([width, height])
+        .padding(2)(root);
 
-      svg.append("g")
-         .call(d3.axisLeft(y));
+      const color = d3.scaleOrdinal()
+        .domain(root.leaves().map(d => d.data.name))
+        .range(d3.schemeCategory10);
 
-      // Bars
-      svg.selectAll(".bar")
-         .data(data)
-         .enter()
-         .append("rect")
-         .attr("class", "bar")
-         .attr("x", d => x(d.Year))
-         .attr("y", d => y(d.Spending))
-         .attr("width", x.bandwidth())
-         .attr("height", d => chartHeight - y(d.Spending))
-         .attr("fill", "#407cca")
-         .on("mouseover", (event, d) => {
-           tooltip.style("opacity", 1)
-                  .html(
-                    `<strong>Year:</strong> ${d.Year}<br/>
-                     <strong>Spending:</strong> ${d.Spending}`
-                  );
-         })
-         .on("mousemove", (event) => {
-           tooltip.style("left", (event.pageX + 10) + "px")
-                  .style("top", (event.pageY - 28) + "px");
-         })
-         .on("mouseout", () => {
-           tooltip.style("opacity", 0);
-         });
-    });
+      const nodes = svg.selectAll("g")
+        .data(root.leaves())
+        .enter()
+        .append("g")
+        .attr("transform", d => `translate(${d.x0},${d.y0})`);
 
-    /*******************************
-     * 2) Swiss Inflation Line Chart
-     *******************************/
-    d3.csv("SwissInflationData.csv").then(data => {
-      // Convert types
-      data.forEach(d => {
-        d.Date = new Date(d.Date);
-        d.Inflation = +d.Inflation;
-      });
+      nodes.append("rect")
+        .attr("width", d => d.x1 - d.x0)
+        .attr("height", d => d.y1 - d.y0)
+        .attr("fill", d => color(d.data.name))
+        .on("mousemove", (event, d) => {
+          tooltip.style("left", (event.pageX + 10) + "px")
+                 .style("top", (event.pageY - 20) + "px")
+                 .style("opacity", 1)
+                 .html(`<strong>${d.data.name}</strong><br>${d.value.toLocaleString()} MCHF`);
+        })
+        .on("mouseout", () => tooltip.style("opacity", 0));
 
-      const svg = d3.select("#inflationChart")
-                    .attr("width", chartWidth + margin.left + margin.right)
-                    .attr("height", chartHeight + margin.top + margin.bottom)
-                    .append("g")
-                    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-      // Scales
-      const x = d3.scaleTime()
-                  .domain(d3.extent(data, d => d.Date))
-                  .range([0, chartWidth]);
-
-      const y = d3.scaleLinear()
-                  .domain([d3.min(data, d => d.Inflation), d3.max(data, d => d.Inflation)])
-                  .range([chartHeight, 0])
-                  .nice();
-
-      // Axes
-      svg.append("g")
-         .attr("transform", `translate(0,${chartHeight})`)
-         .call(d3.axisBottom(x));
-
-      svg.append("g")
-         .call(d3.axisLeft(y));
-
-      // Line generator
-      const line = d3.line()
-                     .x(d => x(d.Date))
-                     .y(d => y(d.Inflation))
-                     .curve(d3.curveMonotoneX);
-
-      // Draw line
-      svg.append("path")
-         .datum(data)
-         .attr("fill", "none")
-         .attr("stroke", "#ff7f50")
-         .attr("stroke-width", 2)
-         .attr("d", line);
-
-      // Points
-      svg.selectAll(".point")
-         .data(data)
-         .enter()
-         .append("circle")
-         .attr("cx", d => x(d.Date))
-         .attr("cy", d => y(d.Inflation))
-         .attr("r", 3)
-         .attr("fill", "#ff7f50")
-         .on("mouseover", (event, d) => {
-           tooltip.style("opacity", 1)
-                  .html(
-                    `<strong>Date:</strong> ${d.Date.toLocaleDateString()}<br/>
-                     <strong>Inflation:</strong> ${d.Inflation}`
-                  );
-         })
-         .on("mousemove", (event) => {
-           tooltip.style("left", (event.pageX + 10) + "px")
-                  .style("top", (event.pageY - 28) + "px");
-         })
-         .on("mouseout", () => {
-           tooltip.style("opacity", 0);
-         });
-    });
-
-    /********************************
-     * 3) World Population Bar/Line *
-     ********************************/
-    d3.csv("WorldPopulationData.csv").then(data => {
-      // Example assumption: CSV has "Year" and "Population" columns
-      data.forEach(d => {
-        d.Year = +d.Year;
-        d.Population = +d.Population;
-      });
-
-      const svg = d3.select("#worldPopChart")
-                    .attr("width", chartWidth + margin.left + margin.right)
-                    .attr("height", chartHeight + margin.top + margin.bottom)
-                    .append("g")
-                    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-      // Scales
-      const x = d3.scaleBand()
-                  .domain(data.map(d => d.Year))
-                  .range([0, chartWidth])
-                  .padding(0.2);
-
-      const y = d3.scaleLinear()
-                  .domain([0, d3.max(data, d => d.Population)])
-                  .range([chartHeight, 0])
-                  .nice();
-
-      // Axes
-      svg.append("g")
-         .attr("transform", `translate(0,${chartHeight})`)
-         .call(d3.axisBottom(x).tickFormat(d3.format("d")))
-         .selectAll("text")
-         .attr("transform", "rotate(-45)")
-         .style("text-anchor", "end");
-
-      svg.append("g")
-         .call(d3.axisLeft(y));
-
-      // Bars
-      svg.selectAll(".pop-bar")
-         .data(data)
-         .enter()
-         .append("rect")
-         .attr("class", "pop-bar")
-         .attr("x", d => x(d.Year))
-         .attr("y", d => y(d.Population))
-         .attr("width", x.bandwidth())
-         .attr("height", d => chartHeight - y(d.Population))
-         .attr("fill", "#8ac926")
-         .on("mouseover", (event, d) => {
-           tooltip.style("opacity", 1)
-                  .html(
-                    `<strong>Year:</strong> ${d.Year}<br/>
-                     <strong>Population:</strong> ${d.Population.toLocaleString()}`
-                  );
-         })
-         .on("mousemove", (event) => {
-           tooltip.style("left", (event.pageX + 10) + "px")
-                  .style("top", (event.pageY - 28) + "px");
-         })
-         .on("mouseout", () => {
-           tooltip.style("opacity", 0);
-         });
+      nodes.append("text")
+        .attr("x", 6)
+        .attr("y", 20)
+        .text(d => d.data.name);
     });
   </script>
 </body>
