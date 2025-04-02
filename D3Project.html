@@ -53,7 +53,7 @@
 
     const tooltip = d3.select("#tooltip");
 
-    d3.csv("ts-x-04.02.04.03.csv", d3.autoType).then(data => {
+    d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(data => {
       const filtered = data.filter(d =>
         d.SECTOR === "S13" &&
         d.PERIOD === 2022 &&
