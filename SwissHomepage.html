@@ -6,67 +6,157 @@
   <title>Switzerland National Spending Visualization</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
+    /* 
+      Define custom CSS variables (colors) based on your Switzerland palette.
+      Adjust the hex codes to precisely match the swatches in your image.
+    */
+    :root {
+      --swiss-green: #008000;  /* Example green */
+      --swiss-red:   #050202;  /* Example "red" is actually black here */
+      --swiss-gray:  #808080;  /* Example medium gray */
+      --swiss-blue:  #00BFFF;  /* Example sky blue */
+      --bg-light:    #f2f2f2;  /* Light gray for page background */
+    }
+  
+    /* Global styles */
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f8f9fa;
-      color: #212529;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-light);
+      color: var(--swiss-gray);
+    }
+  
+    /* Remove background from the entire header */
+    header {
+      position: relative;
+      background: none; /* No big black background on the header itself */
+    }
+
+    /* Navbar styling: apply the black color only to the nav bar, with smaller padding */
+    nav.navbar {
+      background: var(--swiss-red) !important; /* #050202 */
+      margin-bottom: 0;
+      padding: 0.001rem; /* Reduced padding for a smaller black bar */
+    }
+
+    /* If you still want a border around the brand container, uncomment or adjust:
+    nav.navbar .container a {
+      border: 5px solid var(--swiss-green);
+      padding: 5px;
+      border-radius: 8px;
+    }
+    */
+
+    /* Hero banner for the scenic image */
+    .hero-banner {
+      background: url('/images/swiss-lake.png') no-repeat center center;
+      background-size: cover;
+      padding: 3rem 1rem;  /* Adjust as desired for banner height */
+      position: relative;
       text-align: center;
+      color: white;
     }
-
-    .navbar {
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    .hero-banner::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 0;
     }
-
-    .header-title {
-      font-size: 2.5rem;
-      font-weight: bold;
+    .hero-content {
+      position: relative;
+      z-index: 1;
     }
-
-    .intro-box {
-      background-color: #ffffff;
-      border-radius: 0.75rem;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  
+    /* Container styling */
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
     }
-
+  
+    /* Card styling */
     .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      color: var(--swiss-gray);
+    }
+  
+    /* Buttons and interactive elements */
+    button {
+      background: var(--swiss-green);
       border: none;
-      border-radius: 1rem;
-      transition: all 0.3s ease-in-out;
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      font-size: 1rem;
     }
-
-    .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    button:hover {
+      background: var(--swiss-blue);
     }
-
-    .card-img-top {
-      border-top-left-radius: 1rem;
-      border-top-right-radius: 1rem;
-      object-fit: cover;
-      height: 200px;
+  
+    /* Range input and other controls */
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1rem;
     }
-
-    .card-title {
-      font-size: 1.25rem;
-      font-weight: 600;
+    input[type="range"] {
+      width: 300px;
     }
-
-    .card-text {
-      color: #555;
+  
+    /* Select elements */
+    select {
+      margin-bottom: 0.5rem;
+      padding: 4px;
+      font-size: 1rem;
     }
-
+  
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: #fff;
+      border: 1px solid var(--swiss-gray);
+      padding: 8px;
+      font-size: 14px;
+      pointer-events: none;
+      opacity: 0;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      z-index: 100;
+    }
+  
+    /* Ensure SVGs are responsive */
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+  
+    /* Footer styling */
     footer {
-      margin-top: 40px;
-      padding: 20px;
-      font-size: 0.9rem;
-      color: #888;
+      text-align: center;
+      padding: 1rem;
+      background: var(--swiss-gray);
+      color: white;
     }
   </style>
 </head>
 <body>
   <header>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <nav class="navbar navbar-expand-lg navbar-dark">
       <div class="container">
         <a href="/" class="d-flex align-items-center text-decoration-none text-light">
           <img src="/images/swiss-logo.png" height="40" width="40" alt="Swiss Logo" class="me-2" />
@@ -74,11 +164,13 @@
         </a>
       </div>
     </nav>
+    <div class="hero-banner">
+      <div class="hero-content">
+        <h1 class="header-title">Switzerland National Spending Visualization</h1>
+        <p>Explore interactive data visualizations about Switzerland's national spending.</p>
+      </div>
+    </div>
   </header>
-
-  <div class="container mb-4">
-    <h1 class="header-title">Switzerland National Spending Visualization</h1>
-  </div>
 
   <div class="container mb-4">
     <div class="intro-box p-4">
@@ -96,7 +188,7 @@
   </div>
 
   <footer>
-    &copy; 2025 Switzerland Spending Dashboard · Created by Garrett, Adien, and Jordan
+    &copy; 2025 Switzerland Spending Dashboard &middot; Created by Garrett, Adien, and Jordan
   </footer>
 
   <script>
