@@ -2,36 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Swiss Entitlements Spending vs. Inflation</title>
+  <title>Swiss Government Spending Dashboard - Trends</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #f4f6f9;
       margin: 0;
-      padding: 20px;
+      padding: 0;
       color: #333;
     }
+
     header {
-      background: #4f6bed;
+      background: #2f69dd;
       color: white;
       padding: 1rem 2rem;
       text-align: center;
+      position: relative;
+      width: 100vw;
+      left: 50%;
+      right: 50%;
+      margin-left: -50vw;
+      margin-right: -50vw;
     }
+
+    .back-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 2rem;
+      text-decoration: none;
+      color: white;
+      background: none;
+      border: none;
+      cursor: pointer;
+      z-index: 2;
+    }
+    
     header h1 {
       margin: 0;
       font-size: 2rem;
     }
+    
     header p {
       margin-top: 0.5rem;
       font-weight: 300;
     }
+    
     .container {
       max-width: 1200px;
       margin: 2rem auto;
       padding: 0 1rem;
       text-align: center;
     }
+    
     .card {
       background: white;
       border-radius: 8px;
@@ -39,32 +63,40 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       margin-bottom: 2rem;
     }
+    
     .card h2 {
       margin-top: 0;
       font-size: 1.5rem;
       margin-bottom: 1rem;
       text-align: center;
     }
-    /* SVG styles */
-    svg {
-      display: inline-block;
+    
+    #lineChart {
+      width: 100%;
+      height: 500px;
     }
-    .axis path,
-    .axis line {
-      stroke: #ccc;
-    }
+    
     .tooltip {
-      position: absolute;
       background: white;
       border: 1px solid #ccc;
       padding: 8px;
-      font-size: 14px;
-      pointer-events: none;
+      position: absolute;
       opacity: 0;
-      border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      z-index: 100;
+      border-radius: 6px;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      font-size: 13px;
+      z-index: 10;
     }
+    
+    footer {
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 0.9rem;
+      color: #888;
+      text-align: center;
+    }
+    
     button {
       display: inline-block;
       margin: 20px auto;
@@ -77,6 +109,7 @@
       border-radius: 4px;
       transition: background 0.2s ease-in-out;
     }
+    
     button:hover {
       background: #3c52c3;
     }
@@ -84,226 +117,154 @@
 </head>
 <body>
   <header>
+    <!-- Back button on top left -->
+    <a href="SwissHomepage.html" class="back-button">&larr;</a>
     <h1>Swiss Government Spending Dashboard</h1>
     <p>Visualizing functional expenditure over time</p>
   </header>
 
   <div class="container">
     <div class="card">
-      <h2>Inflation V.S. Entitlement Spending</h2>
-      <div id="perCapitaChart"></div>
-      <button id="replayBtn">Replay Animation</button>
+      <h2>Line Chart: Trends by Sector</h2>
+      <svg id="lineChart"></svg>
+    </div>
+
+    <div class="insight">
+      <h3>What This Graph Tells Us</h3>
+      <p>
+        This chart reveals how Switzerland has prioritized spending in three key sectors over the past three decades. 
+        We see education steadily increasing but at a slower pace than health and social protection. Health spending has surged, 
+        reflecting growing public health needs and population aging. Social protection, however, dominates the landscape—its dramatic rise 
+        highlights the country's strong commitment to social safety nets. This visual underscores Switzerland's evolving policy focus on wellbeing 
+        and long-term human development.
+      </p>
     </div>
   </div>
 
   <div class="tooltip" id="tooltip"></div>
 
-  <script>
-    const pcMargin = { top: 60, right: 80, bottom: 60, left: 80 },
-          pcWidth  = 900 - pcMargin.left - pcMargin.right,
-          pcHeight = 500 - pcMargin.top - pcMargin.bottom;
+  <footer>
+    &copy; 2025 Swiss Government Spending Dashboard &middot; Powered by D3.js
+  </footer>
 
-    const pcSvg = d3.select("#perCapitaChart")
-      .append("svg")
-        .attr("width", pcWidth + pcMargin.left + pcMargin.right)
-        .attr("height", pcHeight + pcMargin.top + pcMargin.bottom)
-      .append("g")
-        .attr("transform", `translate(100,${pcMargin.top})`);
+  <script>
+    const svg = d3.select("#lineChart")
+      .attr("width", 1000)
+      .attr("height", 500);
+
+    const margin = { top: 50, right: 150, bottom: 50, left: 80 };
+    const width = +svg.attr("width") - margin.left - margin.right;
+    const height = +svg.attr("height") - margin.top - margin.bottom;
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
     const tooltip = d3.select("#tooltip");
 
-    let spendingData = []; 
-    let inflationData = []; 
-    let combinedYears = [];
+    const colors = {
+      Education: "#4f6bed",
+      Health: "#2ecc71",
+      SocialProtection: "#e74c3c"
+    };
 
     d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(data => {
-      let entitlements = data.filter(d => 
-          d.COFOG.startsWith("GF10") &&
-          d.UNIT_MEAS === "MCHF" &&
-          d.SECTOR === "S13"
+      const categories = {
+        GF09: "Education",
+        GF07: "Health",
+        GF10: "SocialProtection"
+      };
+
+      const grouped = d3.rollup(
+        data.filter(d => d.UNIT_MEAS === "MCHF" && Object.keys(categories).includes(d.COFOG)),
+        v => d3.rollup(v, d => d[0].VALUE, d => d.COFOG),
+        d => d.PERIOD
       );
-      const spendingByYear = d3.rollup(entitlements,
-          v => d3.sum(v, d => +d.VALUE),
-          d => +d.PERIOD
-      );
-      spendingData = Array.from(spendingByYear, ([Year, Spending]) => ({ Year, Spending }));
-      spendingData.sort((a, b) => a.Year - b.Year);
-      spendingData = spendingData.filter(d => d.Year >= 1995 && d.Year <= 2022);
-      
-      return d3.csv("SwissInflationData.csv", d3.autoType);
-    }).then(inflData => {
-      inflData.forEach(d => {
-        if(d.Date) {
-          let dateObj = new Date(d.Date);
-          d.Year = dateObj.getFullYear();
-        } else if(d.Year) {
-          d.Year = +d.Year;
+
+      const dataset = Array.from(grouped, ([year, values]) => {
+        const obj = { Year: +year };
+        for (const [cofog, val] of values.entries()) {
+          obj[categories[cofog]] = +val;
         }
-        d.InflationRate = +d["Inflation Rate"];
-      });
-      inflationData = inflData.filter(d => !isNaN(d.Year) && !isNaN(d.InflationRate));
-      inflationData = inflationData.filter(d => d.Year >= 1995 && d.Year <= 2022);
-      inflationData.sort((a, b) => a.Year - b.Year);
-      
-      const spendingYears = spendingData.map(d => d.Year);
-      const inflationYears = inflationData.map(d => d.Year);
-      combinedYears = d3.extent([...spendingYears, ...inflationYears]);
-      
-      drawChart();
-    }).catch(error => console.error("Error loading data:", error));
-    
-    function drawChart() {
-      const xScale = d3.scaleLinear()
-          .domain(combinedYears)
-          .range([30, pcWidth - 30]);
-      
-      const yLeftScale = d3.scaleLinear()
-          .domain([0, d3.max(spendingData, d => d.Spending) * 1.1])
-          .range([pcHeight, 0])
-          .nice();
-      
-      const yRightScale = d3.scaleLinear()
-          .domain([d3.min(inflationData, d => d.InflationRate), d3.max(inflationData, d => d.InflationRate) * 1.2])
-          .range([pcHeight, 0])
-          .nice();
-      
-      const allYears = d3.range(1995, 2023); 
-      const xAxis = d3.axisBottom(xScale)
-          .tickValues(allYears)
-          .tickFormat(d => "'" + String(d % 100).padStart(2, "0"));
-      pcSvg.append("g")
-         .attr("class", "x axis")
-         .attr("transform", `translate(0,${pcHeight})`)
-         .call(xAxis);
-      
-      const yAxisLeft = d3.axisLeft(yLeftScale)
-         .ticks(5)
-         .tickFormat(d => d + " MCHF");
-      pcSvg.append("g")
-         .attr("class", "y axis left")
-         .call(yAxisLeft);
-      
-      const yAxisRight = d3.axisRight(yRightScale)
-         .ticks(5)
-         .tickFormat(d => d + "%");
-      pcSvg.append("g")
-         .attr("class", "y axis right")
-         .attr("transform", `translate(${pcWidth},0)`)
-         .call(yAxisRight);
-      
-      pcSvg.append("text")
-         .attr("x", pcWidth / 2)
-         .attr("y", pcHeight + 40)
-         .attr("text-anchor", "middle")
-         .style("font-size", "16px")
-         .text("Year");
-      
-      pcSvg.append("text")
-         .attr("transform", "rotate(-90)")
-         .attr("x", -pcHeight / 2)
-         .attr("y", -85)
-         .attr("text-anchor", "middle")
-         .style("font-size", "16px")
-         .text("Government Entitlements Spending (MCHF)");
-      
-      pcSvg.append("text")
-         .attr("transform", "rotate(90)")
-         .attr("x", pcHeight / 2)
-         .attr("y", -780)
-         .attr("text-anchor", "middle")
-         .style("font-size", "16px")
-         .text("Inflation Rate (%)");
-      
-      pcSvg.append("rect")
-         .attr("x", 0)
-         .attr("y", 0)
-         .attr("width", pcWidth)
-         .attr("height", pcHeight)
-         .attr("fill", "none")
-         .attr("stroke", "#ccc")
-         .attr("stroke-width", 1);
-      
-      const inflationLine = d3.line()
-          .x(d => xScale(d.Year))
-          .y(d => yRightScale(d.InflationRate))
-          .curve(d3.curveMonotoneX);
-      
-      function animateChart() {
-        pcSvg.selectAll(".spendingBar").remove();
-        pcSvg.selectAll(".inflationLine").remove();
-        pcSvg.selectAll(".inflationCircle").remove();
-        pcSvg.selectAll(".annotation").remove();
-        
-        pcSvg.selectAll(".spendingBar")
-          .data(spendingData)
-          .enter().append("rect")
-          .attr("class", "spendingBar")
-          .attr("x", d => xScale(d.Year) - 10)
-          .attr("width", 20)
-          .attr("y", yLeftScale(0))
-          .attr("height", 0)
-          .attr("fill", "#66c2a5")
-          .on("mouseover", function(event, d) {
-            tooltip.transition().duration(200).style("opacity", 0.9);
-            tooltip.html(`<strong>Year:</strong> ${d.Year}<br/><strong>Spending:</strong> ${d.Spending.toFixed(1)} MCHF`)
-                   .style("left", (event.pageX + 10) + "px")
-                   .style("top", (event.pageY - 28) + "px");
-          })
-          .on("mouseout", function() {
-            tooltip.transition().duration(500).style("opacity", 0);
-          })
-          .transition()
-          .duration(2500)
-          .ease(d3.easeCubicInOut)
-          .attr("y", d => yLeftScale(d.Spending))
-          .attr("height", d => pcHeight - yLeftScale(d.Spending));
-        
-        const infPath = pcSvg.append("path")
-          .datum(inflationData)
-          .attr("class", "inflationLine")
+        return obj;
+      }).sort((a, b) => a.Year - b.Year);
+
+      const x = d3.scaleLinear()
+        .domain(d3.extent(dataset, d => d.Year))
+        .range([0, width]);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(dataset, d => Math.max(d.Education, d.Health, d.SocialProtection))])
+        .nice()
+        .range([height, 0]);
+
+      g.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+      g.append("g")
+        .call(d3.axisLeft(y));
+
+      Object.keys(colors).forEach(key => {
+        const line = d3.line()
+          .x(d => x(d.Year))
+          .y(d => y(d[key]));
+
+        const path = g.append("path")
+          .datum(dataset)
           .attr("fill", "none")
-          .attr("stroke", "#fc8d62")  
-          .attr("stroke-width", 3)
-          .attr("d", inflationLine);
-        
-        const totalLength = infPath.node().getTotalLength();
-        infPath
+          .attr("stroke", colors[key])
+          .attr("stroke-width", 2)
+          .attr("d", line);
+
+        const totalLength = path.node().getTotalLength();
+
+        path
           .attr("stroke-dasharray", totalLength + " " + totalLength)
           .attr("stroke-dashoffset", totalLength)
           .transition()
-          .duration(2500)
-          .ease(d3.easeCubicInOut)
-          .attr("stroke-dashoffset", 0)
-          .on("end", function() {
-            d3.select(this).attr("stroke-dasharray", "5,5");
-          });
-        
-        pcSvg.selectAll(".inflationCircle")
-          .data(inflationData)
-          .enter().append("circle")
-          .attr("class", "inflationCircle")
-          .attr("cx", d => xScale(d.Year))
-          .attr("cy", d => yRightScale(d.InflationRate))
-          .attr("r", 0)
-          .attr("fill", "#fc8d62")
-          .on("mouseover", function(event, d) {
-            tooltip.transition().duration(200).style("opacity", 0.9);
-            tooltip.html(`<strong>Year:</strong> ${d.Year}<br/><strong>Inflation:</strong> ${d.InflationRate.toFixed(2)}%`)
-                   .style("left", (event.pageX + 10) + "px")
-                   .style("top", (event.pageY - 28) + "px");
+          .duration(2000)
+          .ease(d3.easeCubic)
+          .attr("stroke-dashoffset", 0);
+
+        g.selectAll(`.dot-${key}`)
+          .data(dataset)
+          .join("circle")
+          .attr("class", `dot-${key}`)
+          .attr("cx", d => x(d.Year))
+          .attr("cy", d => y(d[key]))
+          .attr("r", 4)
+          .attr("fill", colors[key])
+          .on("mouseover", function (event, d) {
+            tooltip.transition().duration(200).style("opacity", 1);
+            tooltip.html(`<strong>${key === "SocialProtection" ? "Social Protection" : key}</strong><br>Year: ${d.Year}<br>${d[key].toLocaleString()} MCHF`)
+              .style("left", `${event.pageX + 12}px`)
+              .style("top", `${event.pageY - 28}px`);
           })
-          .on("mouseout", function() {
-            tooltip.transition().duration(500).style("opacity", 0);
-          })
-          .transition()
-          .duration(2500)
-          .ease(d3.easeCubicInOut)
-          .attr("r", 6);
-      }
-      
-      d3.select("#replayBtn").on("click", animateChart);
-      animateChart();
-    }
+          .on("mouseout", () => tooltip.transition().duration(300).style("opacity", 0));
+      });
+
+      Object.keys(colors).forEach(key => {
+        const last = dataset[dataset.length - 1];
+        g.append("text")
+          .attr("x", x(last.Year) + 5)
+          .attr("y", y(last[key]))
+          .attr("fill", colors[key])
+          .attr("font-weight", "bold")
+          .text(key === "SocialProtection" ? "Social Protection" : key);
+      });
+
+      svg.append("text")
+        .attr("transform", `translate(${margin.left + width / 2}, ${margin.top + height + 40})`)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "14px")
+        .text("Year");
+
+      svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 20)
+        .attr("x", 0 - (margin.top + height / 2))
+        .attr("text-anchor", "middle")
+        .attr("font-size", "14px")
+        .text("Spending (Million CHF)");
+    });
   </script>
 </body>
 </html>

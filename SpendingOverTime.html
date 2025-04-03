@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,10 +14,24 @@
     }
 
     header {
-      background: #4f6bed;
+      background: #2f69dd;
       color: white;
       padding: 1rem 2rem;
       text-align: center;
+      position: relative;
+    }
+    
+    .back-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 2rem;
+      text-decoration: none;
+      color: white;
+      background: none;
+      border: none;
+      cursor: pointer;
+      z-index: 2;
     }
 
     header h1 {
@@ -57,7 +70,7 @@
       border-left: 6px solid #4f6bed;
       padding: 1rem 1.5rem;
       margin-bottom: 2rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     }
 
     #lineChart {
@@ -90,28 +103,27 @@
 
 <body>
   <header>
+    <a href="SwissHomepage.html" class="back-button">&larr;</a>
     <h1>Swiss Government Spending Dashboard</h1>
-    <p>Trends in Education, Health, and Social Protection over time</p>
+    <p>Visualizing functional expenditure over time</p>
   </header>
 
   <div class="container">
-    
-
     <div class="card">
       <h2>Line Chart: Trends by Sector</h2>
       <svg id="lineChart"></svg>
     </div>
 
     <div class="insight">
-        <h3>What This Graph Tells Us</h3>
-        <p>
-          This chart reveals how Switzerland has prioritized spending in three key sectors over the past three decades. 
-          We see education steadily increasing but at a slower pace than health and social protection. Health spending has surged, 
-          reflecting growing public health needs and population aging. Social protection, however, dominates the landscape—its dramatic rise 
-          highlights the country's strong commitment to social safety nets. This visual underscores Switzerland's evolving policy focus on wellbeing 
-          and long-term human development.
-        </p>
-      </div>
+      <h3>What This Graph Tells Us</h3>
+      <p>
+        This chart reveals how Switzerland has prioritized spending in three key sectors over the past three decades. 
+        We see education steadily increasing but at a slower pace than health and social protection. Health spending has surged, 
+        reflecting growing public health needs and population aging. Social protection, however, dominates the landscape—its dramatic rise 
+        highlights the country's strong commitment to social safety nets. This visual underscores Switzerland's evolving policy focus on wellbeing 
+        and long-term human development.
+      </p>
+    </div>
   </div>
 
   <div class="tooltip" id="tooltip"></div>
@@ -207,9 +219,7 @@
           .attr("fill", colors[key])
           .on("mouseover", function (event, d) {
             tooltip.transition().duration(200).style("opacity", 1);
-            tooltip.html(
-              `<strong>${key === "SocialProtection" ? "Social Protection" : key}</strong><br>Year: ${d.Year}<br>${d[key].toLocaleString()} MCHF`
-            )
+            tooltip.html(`<strong>${key === "SocialProtection" ? "Social Protection" : key}</strong><br>Year: ${d.Year}<br>${d[key].toLocaleString()} MCHF`)
               .style("left", `${event.pageX + 12}px`)
               .style("top", `${event.pageY - 28}px`);
           })
@@ -242,5 +252,4 @@
     });
   </script>
 </body>
-
 </html>

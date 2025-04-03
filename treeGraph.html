@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
-  <title>Swiss Government Spending Dashboard - Part 1</title>
+  <title>Swiss Government Spending Dashboard - Interactive Treemap</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     body {
@@ -12,59 +11,81 @@
       background: #f4f6f9;
       color: #333;
     }
-
     header {
-      background: #4f6bed;
+      background: #2f69dd;
       color: white;
       padding: 1rem 2rem;
       text-align: center;
     }
-
+    .back-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 2rem;
+      text-decoration: none;
+      color: white;
+      background: none;
+      border: none;
+      cursor: pointer;
+      z-index: 2;
+    }
     header h1 {
       margin: 0;
       font-size: 2rem;
     }
-
     header p {
       margin-top: 0.5rem;
       font-weight: 300;
     }
-
     .container {
       max-width: 1200px;
       margin: 2rem auto;
       padding: 0 1rem;
     }
-
     .card {
       background: white;
       border-radius: 8px;
       padding: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       margin-bottom: 2rem;
     }
-
     .card h2 {
       margin-top: 0;
       font-size: 1.5rem;
       margin-bottom: 1rem;
       text-align: center;
     }
-
-    #chartSingle,
-    #animated-treemap {
+    .treemap-container {
       display: flex;
-      justify-content: center;
-    }
-
-    .controls {
-      display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      gap: 1rem;
-      margin-top: 1rem;
+      gap: 0.5rem;
     }
-
+    .year-select-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    select {
+      margin-bottom: 0.5rem;
+      padding: 4px;
+      font-size: 1rem;
+    }
+    .back-button-inline {
+      padding: 4px 10px;
+      font-size: 13px;
+      background: #e0e0e0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .back-button-inline:hover {
+      background: #d5d5d5;
+    }
+    #chartSingle {
+      display: flex;
+      justify-content: center;
+    }
     .tooltip {
       position: absolute;
       background: white;
@@ -74,79 +95,22 @@
       pointer-events: none;
       opacity: 0;
       border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
       z-index: 100;
     }
-
-    #playPauseBtn {
-      padding: 5px 12px;
-      border: none;
-      background: #4f6bed;
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    #playPauseBtn:hover {
-      background: #3a50c4;
-    }
-
-    input[type="range"] {
-      width: 300px;
-    }
-
-    .year-select-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .back-button-inline {
-      padding: 4px 10px;
-      font-size: 13px;
-      background: #e0e0e0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .back-button-inline:hover {
-      background: #d5d5d5;
-    }
-
-    .treemap-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .treemap-container select {
-      padding: 6px 10px;
-      font-size: 14px;
-      margin-top: 0.5rem;
-    }
-
-    select {
-      margin-bottom: 0.5rem;
-      padding: 4px;
-    }
-
     svg {
       max-width: 100%;
       height: auto;
     }
   </style>
 </head>
-
 <body>
   <header>
+    <a href="SwissHomepage.html" class="back-button">&larr;</a>
     <h1>Swiss Government Spending Dashboard</h1>
     <p>Visualizing functional expenditure over time</p>
   </header>
-
   <div class="container">
-    <!-- Interactive Treemap (Drill Down) -->
     <div class="card">
       <h2>Government Spending by Year</h2>
       <div class="treemap-container">
@@ -155,28 +119,11 @@
           <select id="yearSelectSingle"></select>
           <button class="back-button-inline" id="backBtnSingle" style="display: none;">← Back</button>
         </div>
-        <!-- (A duplicate back button is included in your original; you can remove one if not needed.) -->
-        <button class="back-button" id="backBtnSingle" style="display: none;">← Back</button>
         <div id="chartSingle"></div>
       </div>
     </div>
-
-    <!-- Animated Treemap -->
-    <div class="card">
-      <h2>Spending by Year (Animated Treemap)</h2>
-      <div id="animated-treemap"></div>
-      <div class="controls">
-        <input type="range" id="yearSlider" min="0" step="1">
-        <span id="yearLabel"></span>
-        <button id="playPauseBtn">Play</button>
-      </div>
-    </div>
   </div>
-
-  <!-- Shared Tooltip -->
   <div class="tooltip" id="tooltip"></div>
-
-  <!-- Script for Interactive Treemap -->
   <script>
     const width = 1100, height = 500;
     const svg = d3.select("#chartSingle").append("svg")
@@ -184,9 +131,7 @@
       .attr("height", height);
     const tooltip = d3.select("#tooltip");
     const backBtn = d3.select("#backBtnSingle");
-    let fullData, rootNode;
 
-    // COFOG Labels
     const labels = {
       "GF01": "General public services",
       "GF0101": "Executive and legislative organs, financial and fiscal affairs, external affairs",
@@ -296,7 +241,6 @@
         createSingleTreemap(+this.value);
       });
 
-      // Initial render
       createSingleTreemap(2022);
     });
 
@@ -307,9 +251,6 @@
       const svg = container.append("svg")
         .attr("width", width)
         .attr("height", height);
-
-      const backBtn = d3.select("#backBtnSingle");
-      let rootNode;
 
       d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(raw => {
         const filtered = raw.filter(d => d.SECTOR === "S13" && d.PERIOD === year);
@@ -359,7 +300,7 @@
           }))
         };
 
-        rootNode = d3.hierarchy(topOnly).sum(d => d.value);
+        const rootNode = d3.hierarchy(topOnly).sum(d => d.value);
         drawSingleTreemap(svg, rootNode, false);
       });
 
@@ -416,7 +357,6 @@
             }
           });
 
-        // Conditionally render text if it fits
         nodes.each(function (d) {
           const group = d3.select(this);
           const boxWidth = d.x1 - d.x0;
@@ -441,7 +381,6 @@
               .text(line);
           });
 
-          // Hide if the text overflows box
           const bbox = textGroup.node().getBBox();
           if (bbox.width > boxWidth || bbox.height > boxHeight) {
             textGroup.remove();
@@ -449,162 +388,11 @@
         });
       }
 
-
       backBtn.on("click", () => {
         createSingleTreemap(+document.getElementById("yearSelectSingle").value);
         backBtn.style("display", "none");
       });
     }
   </script>
-
-  <!-- Script for Animated Treemap -->
-  <script>
-    const cofogLabels = {
-      'GF01': 'Public services', 'GF02': 'Defence', 'GF03': 'Safety',
-      'GF04': 'Economic', 'GF05': 'Environment', 'GF06': 'Housing',
-      'GF07': 'Health', 'GF08': 'Culture & religion',
-      'GF09': 'Education', 'GF10': 'Social protection'
-    };
-
-    const cofogColors = {
-      'Public services': '#e74c3c', 'Defence': '#1abc9c', 'Safety': '#ff6384',
-      'Economic': '#9b59b6', 'Environment': '#f39c12', 'Housing': '#2ecc71',
-      'Health': '#f39c6b', 'Education': '#1abc9c',
-      'Culture & religion': '#b5e48c', 'Social protection': '#4f6bed'
-    };
-
-    let animationTimer = null;
-    let currentYearIndex = 0;
-    let animationDataByYear = [];
-    const treemapWidth = 1100;
-    const treemapHeight = 500;
-
-    const treemapSvg = d3.select("#animated-treemap")
-      .append("svg")
-      .attr("width", treemapWidth)
-      .attr("height", treemapHeight);
-
-    // Reuse the global tooltip
-    const treemapTooltip = d3.select("#tooltip");
-
-    d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(data => {
-      const filtered = data.filter(d =>
-        d.SECTOR === "S13" &&
-        d.UNIT_MEAS === "MCHF" &&
-        /^GF\d{2}$/.test(d.COFOG)
-      );
-      const nested = d3.group(filtered, d => d.PERIOD);
-      const years = Array.from(nested.keys()).sort((a, b) => a - b);
-      animationDataByYear = years.map(year => {
-        const values = nested.get(year);
-        const children = values.map(d => ({
-          name: cofogLabels[d.COFOG] || d.COFOG,
-          value: d.VALUE,
-          color: cofogColors[cofogLabels[d.COFOG]]
-        }));
-        return { year, children };
-      });
-
-      // Initialize slider
-      const slider = d3.select("#yearSlider")
-        .attr("max", years.length - 1)
-        .on("input", function () {
-          currentYearIndex = +this.value;
-          drawAnimatedTreemap(animationDataByYear[currentYearIndex]);
-        });
-
-      d3.select("#playPauseBtn").on("click", () => {
-        if (animationTimer) {
-          clearInterval(animationTimer);
-          animationTimer = null;
-          d3.select("#playPauseBtn").text("Play");
-        } else {
-          animationTimer = setInterval(() => {
-            currentYearIndex = (currentYearIndex + 1) % animationDataByYear.length;
-            slider.property("value", currentYearIndex);
-            drawAnimatedTreemap(animationDataByYear[currentYearIndex]);
-          }, 400);
-          d3.select("#playPauseBtn").text("Pause");
-        }
-      });
-
-      drawAnimatedTreemap(animationDataByYear[currentYearIndex]);
-    });
-
-    function drawAnimatedTreemap(dataObj) {
-      d3.select("#yearLabel").text(dataObj.year);
-      treemapSvg.selectAll("*").remove();
-
-      const root = d3.hierarchy({ name: "root", children: dataObj.children })
-        .sum(d => d.value)
-        .sort((a, b) => b.value - a.value);
-
-      d3.treemap()
-        .size([treemapWidth, treemapHeight])
-        .padding(2)(root);
-
-      const nodes = treemapSvg.selectAll("g")
-        .data(root.leaves())
-        .join("g")
-        .attr("transform", d => `translate(${d.x0},${d.y0})`);
-
-      nodes.append("rect")
-        .attr("width", d => d.x1 - d.x0)
-        .attr("height", d => d.y1 - d.y0)
-        .attr("fill", d => d.data.color)
-        .on("mousemove", (event, d) => {
-          const percent = ((d.value / root.value) * 100).toFixed(1);
-          const tooltipWidth = 180, tooltipHeight = 50;
-          let [pageX, pageY] = [event.pageX, event.pageY];
-          if (pageX + tooltipWidth > window.innerWidth) pageX -= tooltipWidth + 20;
-          if (pageY + tooltipHeight > window.innerHeight) pageY -= tooltipHeight + 20;
-
-          treemapTooltip
-            .style("left", `${pageX + 10}px`)
-            .style("top", `${pageY - 20}px`)
-            .style("opacity", 1)
-            .html(`
-          <strong>${d.data.name}</strong><br>
-          ${d.value.toLocaleString()} MCHF<br>
-          ${percent}% of total
-        `);
-        })
-        .on("mouseout", () => treemapTooltip.style("opacity", 0));
-
-      // Add labels only if they fit
-      nodes.each(function (d) {
-        const group = d3.select(this);
-        const boxWidth = d.x1 - d.x0;
-        const boxHeight = d.y1 - d.y0;
-
-        const lines = [
-          d.data.name,
-          `${d.value.toLocaleString()} MCHF`,
-          `${((d.value / root.value) * 100).toFixed(1)}% of total`
-        ];
-
-        const textGroup = group.append("g")
-          .attr("text-anchor", "middle")
-          .attr("transform", `translate(${boxWidth / 2}, ${boxHeight / 2 - 16})`);
-
-        lines.forEach((line, i) => {
-          textGroup.append("text")
-            .attr("y", i * 16)
-            .attr("fill", "black")
-            .attr("font-size", "13px")
-            .style("pointer-events", "none")
-            .text(line);
-        });
-
-        // Remove if too big
-        const bbox = textGroup.node().getBBox();
-        if (bbox.width > boxWidth || bbox.height > boxHeight) {
-          textGroup.remove();
-        }
-      });
-    }
-
-  </script>
 </body>
-
 </html>
