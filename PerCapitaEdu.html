@@ -13,7 +13,7 @@
       color: #333;
     }
     header {
-      background: #4f6bed;
+      background: #2f69dd;
       color: white;
       padding: 1rem 2rem;
       text-align: center;
@@ -21,6 +21,18 @@
     header h1 {
       margin: 0;
       font-size: 2rem;
+    }
+    .back-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 2rem;
+      text-decoration: none;
+      color: white;
+      background: none;
+      border: none;
+      cursor: pointer;
+      z-index: 2;
     }
     header p {
       margin-top: 0.5rem;
@@ -65,12 +77,12 @@
 
 <body>
   <header>
+    <a href="SwissHomepage.html" class="back-button">&larr;</a>
     <h1>Swiss Government Spending Dashboard</h1>
     <p>Visualizing functional expenditure over time</p>
   </header>
 
   <div class="container">
-    <!-- Per Capita Spending Graph -->
     <div class="card">
       <h2 style="text-align:center;">Per Capita Spending on Education of All Levels</h2>
       <div id="perCapitaChart"></div>
@@ -80,10 +92,8 @@
     </div>
   </div>
 
-  <!-- Shared Tooltip -->
   <div class="tooltip" id="tooltip"></div>
 
-  <!-- Script for Per Capita Spending Graph -->
   <script>
     var pcMargin = { top: 60, right: 100, bottom: 50, left: 60 },
         pcWidth  = 800 - pcMargin.left - pcMargin.right,
@@ -110,7 +120,6 @@
       });
 
       d3.csv("SwissGovSpend.csv.csv").then(function(data) {
-        // Filter for families and children spending (GF09, MCHF, S13)
         var FamChild = data.filter(d =>
           d['COFOG'] === "GF09" &&
           d['UNIT_MEAS'] === "MCHF" &&
@@ -197,7 +206,6 @@
                .text("Spending on Education Per Capita (CHF)");
     
           function animatePerCapita(){
-            // Remove only animated elements (preserve axes)
             pcSvg.selectAll(".perCapitaCircle").remove();
             pcSvg.selectAll(".inflationLine").remove();
     
@@ -207,11 +215,11 @@
                     .attr("class", "perCapitaCircle")
                     .attr("cx", d => x(d.PERIOD))
                     .attr("cy", d => y(d.PerCapita))
-                    .attr("r", 0)  // Start with radius 0
+                    .attr("r", 0)
                     .attr("fill", d => color(d["Deviation by Percent"]))
                     .attr("stroke", "#333")
                     .attr("stroke-width", 1)
-                    .attr("pointer-events", "all")  // Ensure hover events work even if circles are small
+                    .attr("pointer-events", "all")
                     .on("mouseover", function(event, d) {
                         d3.select("#tooltip").transition().duration(200).style("opacity", 0.9);
                         d3.select("#tooltip").html("<strong>Year:</strong> " + d.PERIOD +
@@ -250,15 +258,13 @@
                     .ease(d3.easeCubic)
                     .attr("stroke-dashoffset", 0)
                     .on("end", function() {
-                        // After the animation, set the dash array to a dashed pattern
                         d3.select(this).attr("stroke-dasharray", "5,5");
                     });
           }
     
           d3.select("#perCapitaPlayBtn").on("click", animatePerCapita);
           animatePerCapita();
-    
-          // Legend Area
+
           var legend = pcSvg.append("g")
             .attr("class", "legend")
             .attr("transform", "translate(" + (pcWidth - 220) + ",200)");
@@ -276,8 +282,7 @@
             .text("Predicted Inflation Adjusted Per Capita Spending")
             .style("font-size", "12px")
             .attr("alignment-baseline", "middle");
-    
-          // Legend for circle colors as a continuous scale
+
           var legendMargin = { top: 10, right: 0, bottom: 20, left: 0 },
               legendWidth = 150,
               legendHeight = 10;
