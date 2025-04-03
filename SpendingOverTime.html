@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Swiss Government Spending Dashboard - Trends</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f9;
+      color: #333;
+    }
+
+    header {
+      background: #4f6bed;
+      color: white;
+      padding: 1rem 2rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      font-weight: 300;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .insight {
+      background: #ffffff;
+      border-left: 6px solid #4f6bed;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    #lineChart {
+      width: 100%;
+      height: 500px;
+    }
+
+    .tooltip {
+      background: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      position: absolute;
+      opacity: 0;
+      border-radius: 6px;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      font-size: 13px;
+      z-index: 10;
+    }
+
+    footer {
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 0.9rem;
+      color: #888;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Swiss Government Spending Dashboard</h1>
+    <p>Trends in Education, Health, and Social Protection over time</p>
+  </header>
+
+  <div class="container">
+    
+
+    <div class="card">
+      <h2>Line Chart: Trends by Sector</h2>
+      <svg id="lineChart"></svg>
+    </div>
+
+    <div class="insight">
+        <h3>What This Graph Tells Us</h3>
+        <p>
+          This chart reveals how Switzerland has prioritized spending in three key sectors over the past three decades. 
+          We see education steadily increasing but at a slower pace than health and social protection. Health spending has surged, 
+          reflecting growing public health needs and population aging. Social protection, however, dominates the landscape—its dramatic rise 
+          highlights the country's strong commitment to social safety nets. This visual underscores Switzerland's evolving policy focus on wellbeing 
+          and long-term human development.
+        </p>
+      </div>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <footer>
+    &copy; 2025 Swiss Government Spending Dashboard · Powered by D3.js
+  </footer>
+
+  <script>
+    const svg = d3.select("#lineChart")
+      .attr("width", 1000)
+      .attr("height", 500);
+
+    const margin = { top: 50, right: 150, bottom: 50, left: 80 };
+    const width = +svg.attr("width") - margin.left - margin.right;
+    const height = +svg.attr("height") - margin.top - margin.bottom;
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const tooltip = d3.select("#tooltip");
+
+    const colors = {
+      Education: "#4f6bed",
+      Health: "#2ecc71",
+      SocialProtection: "#e74c3c"
+    };
+
+    d3.csv("SwissGovSpend.csv.csv", d3.autoType).then(data => {
+      const categories = {
+        GF09: "Education",
+        GF07: "Health",
+        GF10: "SocialProtection"
+      };
+
+      const grouped = d3.rollup(
+        data.filter(d => d.UNIT_MEAS === "MCHF" && Object.keys(categories).includes(d.COFOG)),
+        v => d3.rollup(v, d => d[0].VALUE, d => d.COFOG),
+        d => d.PERIOD
+      );
+
+      const dataset = Array.from(grouped, ([year, values]) => {
+        const obj = { Year: +year };
+        for (const [cofog, val] of values.entries()) {
+          obj[categories[cofog]] = +val;
+        }
+        return obj;
+      }).sort((a, b) => a.Year - b.Year);
+
+      const x = d3.scaleLinear()
+        .domain(d3.extent(dataset, d => d.Year))
+        .range([0, width]);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(dataset, d => Math.max(d.Education, d.Health, d.SocialProtection))])
+        .nice()
+        .range([height, 0]);
+
+      g.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+      g.append("g")
+        .call(d3.axisLeft(y));
+
+      Object.keys(colors).forEach(key => {
+        const line = d3.line()
+          .x(d => x(d.Year))
+          .y(d => y(d[key]));
+
+        const path = g.append("path")
+          .datum(dataset)
+          .attr("fill", "none")
+          .attr("stroke", colors[key])
+          .attr("stroke-width", 2)
+          .attr("d", line);
+
+        const totalLength = path.node().getTotalLength();
+
+        path
+          .attr("stroke-dasharray", totalLength + " " + totalLength)
+          .attr("stroke-dashoffset", totalLength)
+          .transition()
+          .duration(2000)
+          .ease(d3.easeCubic)
+          .attr("stroke-dashoffset", 0);
+
+        g.selectAll(`.dot-${key}`)
+          .data(dataset)
+          .join("circle")
+          .attr("class", `dot-${key}`)
+          .attr("cx", d => x(d.Year))
+          .attr("cy", d => y(d[key]))
+          .attr("r", 4)
+          .attr("fill", colors[key])
+          .on("mouseover", function (event, d) {
+            tooltip.transition().duration(200).style("opacity", 1);
+            tooltip.html(
+              `<strong>${key === "SocialProtection" ? "Social Protection" : key}</strong><br>Year: ${d.Year}<br>${d[key].toLocaleString()} MCHF`
+            )
+              .style("left", `${event.pageX + 12}px`)
+              .style("top", `${event.pageY - 28}px`);
+          })
+          .on("mouseout", () => tooltip.transition().duration(300).style("opacity", 0));
+      });
+
+      Object.keys(colors).forEach(key => {
+        const last = dataset[dataset.length - 1];
+        g.append("text")
+          .attr("x", x(last.Year) + 5)
+          .attr("y", y(last[key]))
+          .attr("fill", colors[key])
+          .attr("font-weight", "bold")
+          .text(key === "SocialProtection" ? "Social Protection" : key);
+      });
+
+      svg.append("text")
+        .attr("transform", `translate(${margin.left + width / 2}, ${margin.top + height + 40})`)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "14px")
+        .text("Year");
+
+      svg.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 20)
+        .attr("x", 0 - (margin.top + height / 2))
+        .attr("text-anchor", "middle")
+        .attr("font-size", "14px")
+        .text("Spending (Million CHF)");
+    });
+  </script>
+</body>
+
+</html>

@@ -1,85 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Switzerland National Spending Visualization</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <style>
-      body {
-          text-align: center;
-      }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Switzerland National Spending Visualization</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* 
+      Define custom CSS variables (colors) based on your Switzerland palette.
+      Adjust the hex codes to precisely match the swatches in your image.
+    */
+    :root {
+      --swiss-green: #008000;  /* Example green */
+      --swiss-red:   #050202;  /* Example "red" is actually black here */
+      --swiss-gray:  #808080;  /* Example medium gray */
+      --swiss-blue:  #00BFFF;  /* Example sky blue */
+      --bg-light:    #f2f2f2;  /* Light gray for page background */
+    }
+  
+    /* Global styles */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-light);
+      color: var(--swiss-gray);
+    }
+  
+    /* Remove background from the entire header */
+    header {
+      position: relative;
+      background: none; /* No big black background on the header itself */
+    }
+
+    /* Navbar styling: apply the black color only to the nav bar, with smaller padding */
+    nav.navbar {
+      background: var(--swiss-red) !important; /* #050202 */
+      margin-bottom: 0;
+      padding: 0.001rem; /* Reduced padding for a smaller black bar */
+    }
+
+    /* If you still want a border around the brand container, uncomment or adjust:
+    nav.navbar .container a {
+      border: 5px solid var(--swiss-green);
+      padding: 5px;
+      border-radius: 8px;
+    }
+    */
+
+    /* Hero banner for the scenic image */
+    .hero-banner {
+      background: url('/images/swiss-lake.png') no-repeat center center;
+      background-size: cover;
+      padding: 3rem 1rem;  /* Adjust as desired for banner height */
+      position: relative;
+      text-align: center;
+      color: white;
+    }
+    .hero-banner::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 0;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+  
+    /* Container styling */
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+  
+    /* Card styling */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 2rem;
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      color: var(--swiss-gray);
+    }
+  
+    /* Buttons and interactive elements */
+    button {
+      background: var(--swiss-green);
+      border: none;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      font-size: 1rem;
+    }
+    button:hover {
+      background: var(--swiss-blue);
+    }
+  
+    /* Range input and other controls */
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    input[type="range"] {
+      width: 300px;
+    }
+  
+    /* Select elements */
+    select {
+      margin-bottom: 0.5rem;
+      padding: 4px;
+      font-size: 1rem;
+    }
+  
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: #fff;
+      border: 1px solid var(--swiss-gray);
+      padding: 8px;
+      font-size: 14px;
+      pointer-events: none;
+      opacity: 0;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      z-index: 100;
+    }
+  
+    /* Ensure SVGs are responsive */
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+  
+    /* Footer styling */
+    footer {
+      text-align: center;
+      padding: 1rem;
+      background: var(--swiss-gray);
+      color: white;
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3">
-            <div class="container">
-                <a href="/" class="d-flex align-items-center text-decoration-none text-light">
-                    <img src="/images/swiss-logo.png" height="40" width="40" alt="Swedish Logo" class="me-2" />
-                    <h2 class="m-0">Switzerland Spending</h2>
-                </a>
+  <header>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <div class="container">
+        <a href="/" class="d-flex align-items-center text-decoration-none text-light">
+          <img src="/images/swiss-logo.png" height="40" width="40" alt="Swiss Logo" class="me-2" />
+          <h2 class="m-0">Switzerland Spending</h2>
+        </a>
+      </div>
+    </nav>
+    <div class="hero-banner">
+      <div class="hero-content">
+        <h1 class="header-title">Switzerland National Spending Visualization</h1>
+        <p>Explore interactive data visualizations about Switzerland's national spending.</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="container mb-4">
+    <div class="intro-box p-4">
+      <p class="mb-0">Explore interactive data visualizations about Switzerland's national spending. Dive into trends across time, regions, and sectors—all presented in an engaging, insightful format.</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <main role="main">
+      <section id="graphs">
+        <h2 class="mb-4">Explore the Graphs</h2>
+        <div class="row" id="card-container"></div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    &copy; 2025 Switzerland Spending Dashboard &middot; Created by Garrett, Adien, and Jordan
+  </footer>
+
+  <script>
+    const graphs = [
+      {
+        title: "Spending Over Time",
+        img: "/images/treemap.png",
+        link: "treeGraph.html",
+        desc: "Click to view detailed graph and analysis."
+      },
+      {
+        title: "Budget Allocation by Sector",
+        img: "/images/PerCapitaSpending.png",
+        link: "PerCapitaEdu.html",
+        desc: "Explore spending across different sectors."
+      },
+      {
+        title: "Regional Spending Distribution",
+        img: "/images/placeholder1.png",
+        link: "D3Project.html",
+        desc: "View detailed analysis by region."
+      }
+    ];
+
+    const container = document.getElementById('card-container');
+
+    graphs.forEach(({ title, img, link, desc }) => {
+      container.innerHTML += `
+        <div class="col-md-4 mb-4 d-flex align-items-stretch">
+          <div class="card w-100">
+            <a href="${link}">
+              <img src="${img}" class="card-img-top" alt="${title}" />
+            </a>
+            <div class="card-body">
+              <h5 class="card-title">${title}</h5>
+              <p class="card-text">${desc}</p>
             </div>
-        </nav>
-    </header>
-
-    <div class="container bg-light py-3 mb-3">
-        <h1 class="text-dark">Switzerland National Spending Visualization</h1>
-    </div>
-
-    <div class="container mb-3">
-        <div class="border p-3">
-            <p>This is a box about our amazing graphs. Isn't our website so cool and nice I really appreciate how this website looks like a 
-                website omg wow look at these words this is so interesting.
-            </p>
+          </div>
         </div>
-    </div>
-
-    <div class="container">
-        <main role="main" class="pb-3">
-            <section id="graphs">
-                <h1 class="mb-4">Statistical Graphs on Swedish National Spending</h1>
-                <div class="row">
-                    <div class="col-md-4 mb-4">
-                        <div class="card">
-                            <a href="treeGraph.html">
-                                <img src="/images/treemap.png" class="card-img-top" alt="Graph 1: Spending Over Time" />
-                            </a>
-                            <div class="card-body">
-                                <h5 class="card-title">Spending Over Time</h5>
-                                <p class="card-text">Click to view detailed graph and analysis.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-4">
-                        <div class="card">
-                            <a href="PerCapitaEdu.html">
-                                <img src="/images/PerCapitaSpending.png" class="card-img-top" alt="Graph 2: Budget Allocation by Sector" />
-                            </a>
-                            <div class="card-body">
-                                <h5 class="card-title">Budget Allocation by Sector</h5>
-                                <p class="card-text">Explore spending across different sectors.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-4">
-                        <div class="card">
-                            <a href="D3Project.html">
-                                <img src="/images/placeholder1.png" class="card-img-top" alt="Graph 3: Regional Spending Distribution" />
-                            </a>
-                            <div class="card-body">
-                                <h5 class="card-title">Regional Spending Distribution</h5>
-                                <p class="card-text">View detailed analysis by region.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+      `;
+    });
+  </script>
 </body>
 </html>
