@@ -135,7 +135,6 @@
   </footer>
 
   <script>
-    // Main SVG and margins
     const svg = d3.select("#lineChart")
       .attr("width", 1000)
       .attr("height", 500);
@@ -143,7 +142,6 @@
     const margin = { top: 50, right: 150, bottom: 50, left: 80 };
     const width = +svg.attr("width") - margin.left - margin.right;
     const height = +svg.attr("height") - margin.top - margin.bottom;
-    // Group for the line chart
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
     const tooltip = d3.select("#tooltip");
@@ -175,18 +173,15 @@
         return obj;
       }).sort((a, b) => a.Year - b.Year);
 
-      // x scale for the line chart
       const x = d3.scaleLinear()
         .domain(d3.extent(dataset, d => d.Year))
         .range([0, width]);
 
-      // y scale for spending
       const y = d3.scaleLinear()
         .domain([0, d3.max(dataset, d => Math.max(d.Education, d.Health, d.SocialProtection))])
         .nice()
         .range([height, 0]);
 
-      // Append axes for the line chart
       g.append("g")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x).tickFormat(d3.format("d")));
@@ -194,7 +189,6 @@
       g.append("g")
         .call(d3.axisLeft(y));
 
-      // Draw each line with animation and add circles for tooltips
       Object.keys(colors).forEach(key => {
         const line = d3.line()
           .x(d => x(d.Year))
@@ -234,7 +228,6 @@
           .on("mouseout", () => tooltip.transition().duration(300).style("opacity", 0));
       });
 
-      // Add labels at the end of each line
       Object.keys(colors).forEach(key => {
         const last = dataset[dataset.length - 1];
         g.append("text")
@@ -245,7 +238,6 @@
           .text(key === "SocialProtection" ? "Social Protection" : key);
       });
 
-      // Append x-axis and left y-axis labels
       svg.append("text")
         .attr("transform", `translate(${margin.left + width / 2}, ${margin.top + height + 40})`)
         .attr("text-anchor", "middle")
@@ -260,12 +252,9 @@
         .attr("font-size", "14px")
         .text("Spending (Million CHF)");
 
-      // --- BAR GRAPH CODE ADDED BELOW ---
-      // Insert a group for the bar chart behind the line chart group
       const barG = svg.insert("g", "g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      // Load the Excel file and parse it with SheetJS
       fetch("SwissMedianAge.xlsx")
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => {
@@ -275,38 +264,30 @@
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-          // Filter data for Total Median Age between 1995 and 2022.
-          // (Assumes the Excel file has columns "Year" and "TotalMedianAge")
           const filteredData = jsonData.filter(d => d.Year >= 1995 && d.Year <= 2022)
             .sort((a, b) => a.Year - b.Year);
 
-          // Create an x scale for the bar chart (using the same range)
           const xBar = d3.scaleLinear()
             .domain([1995, 2022])
             .range([0, width]);
 
-          // Create a y scale for the median age (right axis)
           const yBar = d3.scaleLinear()
             .domain([0, d3.max(filteredData, d => +d.TotalMedianAge)]).nice()
             .range([height, 0]);
 
-          // Append a right-side y axis for median age
           svg.append("g")
             .attr("transform", `translate(${margin.left + width},${margin.top})`)
             .call(d3.axisRight(yBar));
 
-          // Add a right y axis label for Total Median Age
           svg.append("text")
             .attr("transform", `translate(${margin.left + width + 40}, 230) rotate(90)`)
             .attr("text-anchor", "middle")
             .attr("font-size", "14px")
             .text("Total Median Age");
 
-          // Calculate bar width based on the number of years (28 years from 1995 to 2022)
           const numYears = 2022 - 1995 + 1;
           const barWidth = (width / numYears) * 0.8;
 
-          // Draw the bars with an initial height of 0, then animate them into view
           const bars = barG.selectAll(".bar")
             .data(filteredData)
             .join("rect")
@@ -317,7 +298,6 @@
             .attr("height", 0)
             .attr("fill", "#f39c12");
 
-          // Add tooltip event handlers to the bars with median age rounded to two decimal points
           bars.on("mouseover", function (event, d) {
             tooltip.transition().duration(200).style("opacity", 1);
             tooltip.html(`<strong>Year: ${d.Year}</strong><br>Total Median Age: ${(+d.TotalMedianAge).toFixed(2)}`)
@@ -328,7 +308,6 @@
             tooltip.transition().duration(300).style("opacity", 0);
           });
 
-          // Animate the bars into view
           bars.transition()
             .duration(2000)
             .ease(d3.easeCubic)
