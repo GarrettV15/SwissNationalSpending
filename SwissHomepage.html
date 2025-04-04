@@ -8,7 +8,6 @@
   <style>
 
     :root {
-      --swiss-green: #008000;
       --swiss-red:   #2f69dd;
       --swiss-gray:  #808080;
       --swiss-blue:  #00BFFF;
@@ -71,16 +70,30 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       margin-bottom: 2rem;
     }
-    .card h2 {
-      margin-top: 0;
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
+    .card-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--swiss-red);
       text-align: center;
-      color: var(--swiss-gray);
+      margin-bottom: 0.5rem;
+    }
+    .card-text {
+      font-size: 1.125rem;
+      line-height: 1.6;
+      color: #555;
+      text-align: center;
+    }
+
+    .intro-box {
+      border: 2px solid var(--swiss-red);
+      border-radius: 8px;
+      background-color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      padding: 1rem 1.5rem;
     }
 
     button {
-      background: var(--swiss-green);
+      background: var(--swiss-blue);
       border: none;
       color: white;
       padding: 0.5rem 1rem;
@@ -90,7 +103,7 @@
       font-size: 1rem;
     }
     button:hover {
-      background: var(--swiss-blue);
+      background: var(--swiss-red);
     }
 
     .controls {
@@ -155,8 +168,10 @@
   </header>
 
   <div class="container mb-4">
-    <div class="intro-box p-4">
-      <p class="mb-0">Explore interactive data visualizations about Switzerland's national spending. Dive into trends across time, regions, and sectors—all presented in an engaging, insightful format.</p>
+    <div class="intro-box">
+      <p class="mb-0">
+        Explore interactive data visualizations about Switzerland's national spending. Dive into trends across time, regions, and sectors—all presented in an engaging, insightful format.
+      </p>
     </div>
   </div>
 
@@ -183,8 +198,8 @@
       },
       {
         title: "Budget Allocation by Sector",
-        img: "/images/PerCapitaSpending.png",
-        link: "PerCapitaEdu.html",
+        img: "/images/SpendOvio.png",
+        link: "SpendingOverTime.html",
         desc: "Explore spending across different sectors."
       },
       {
@@ -195,8 +210,8 @@
       },
       {
         title: "Budget Allocation by Sector",
-        img: "/images/PerCapitaSpending.png",
-        link: "SpendingOverTime.html",
+        img: "images/PerCapitaSpending.png",
+        link: "PerCapitaEdu.html",
         desc: "Explore spending across different sectors."
       },
       {
