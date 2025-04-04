@@ -1,358 +1,380 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PISA Scores vs. Education Spending</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    :root {
-      --swiss-green: #008000;
-      --swiss-red:   #2f69dd;
-      --swiss-gray:  #808080;
-      --swiss-blue:  #00BFFF;
-      --bg-light:    #f2f2f2;
-      --bg-black:    #000000;
-    }
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: var(--bg-light);
-      color: var(--swiss-gray);
-      padding: 0 20px 20px 20px;
-    }
-    header {
-      background: var(--swiss-red);
-      color: white;
-      padding: 1rem 2rem;
-      text-align: center;
-      position: relative;
-      width: 100vw;
-      margin-left: -20px;
-      margin-right: -20px;
-      top: 0;
-      left: 0;
-    }
-    .back-button {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-size: 2rem;
-      text-decoration: none;
-      color: white;
-      background: none;
-      border: none;
-      cursor: pointer;
-      z-index: 2;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 2rem;
-    }
-    header p {
-      margin-top: 0.5rem;
-      font-weight: 300;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      text-align: center;
-    }
-    .card {
-      background: #fff;
-      border-radius: 8px;
-      padding: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      margin-bottom: 2rem;
-    }
-    .card h2 {
-      margin-top: 0;
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
-      text-align: center;
-      color: var(--swiss-gray);
-    }
-    .insight {
-      background: #ffffff;
-      border-left: 6px solid #4f6bed;
-      padding: 1rem 1.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    }
-    .insight h3 {
-      margin-top: 0;
-      font-size: 1.5rem;
-      color: var(--swiss-red);
-      text-align: center;
-      margin-bottom: 0.5rem;
-    }
-    .insight p {
-      font-size: 1rem;
-      line-height: 1.6;
-      color: #555;
-      text-align: center;
-    }
-    .tooltip {
-      background: #fff;
-      border: 1px solid var(--swiss-gray);
-      padding: 8px;
-      font-size: 14px;
-      pointer-events: none;
-      opacity: 0;
-      border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      z-index: 100;
-      position: absolute;
-    }
-    svg {
-      max-width: 100%;
-      height: auto;
-    }
-    footer {
-      text-align: center;
-      padding: 1rem;
-      background: var(--swiss-gray);
-      color: white;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PISA Scores vs. Education Spending</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --swiss-green: #008000;
+            --swiss-red: #2f69dd;
+            --swiss-gray: #808080;
+            --swiss-blue: #00BFFF;
+            --bg-light: #f2f2f2;
+            --bg-black: #000000;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            color: var(--swiss-gray);
+            padding: 0 20px 20px 20px;
+        }
+
+        header {
+            background: var(--swiss-red);
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+            position: relative;
+            width: 100vw;
+            margin-left: -20px;
+            margin-right: -20px;
+            top: 0;
+            left: 0;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 2rem;
+            text-decoration: none;
+            color: white;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        header p {
+            margin-top: 0.5rem;
+            font-weight: 300;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            text-align: center;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: var(--swiss-gray);
+        }
+
+        .insight {
+            background: #ffffff;
+            border-left: 6px solid #4f6bed;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .insight h3 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: var(--swiss-red);
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .insight p {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #555;
+            text-align: center;
+        }
+
+        .tooltip {
+            background: #fff;
+            border: 1px solid var(--swiss-gray);
+            padding: 8px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            position: absolute;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1rem;
+            background: var(--swiss-gray);
+            color: white;
+        }
+    </style>
 </head>
+
 <body>
-  <header>
-    <a href="SwissHomepage.html" class="back-button">&larr;</a>
-    <h1>Swiss Government Spending Dashboard</h1>
-    <p>Visualizing functional expenditure over time</p>
-  </header>
+    <header>
+        <a href="SwissHomepage.html" class="back-button">&larr;</a>
+        <h1>Swiss Government Spending Dashboard</h1>
+        <p>Visualizing functional expenditure over time</p>
+    </header>
 
-  <div class="container">
-    <div class="card">
-      <h2>PISA Scores vs. Education Spending</h2>
-      <div id="chartContainer">
-        <svg width="900" height="550"></svg>
-      </div>
+    <div class="container">
+        <div class="card">
+            <h2>PISA Scores vs. Education Spending</h2>
+            <div id="chartContainer">
+                <svg width="900" height="550"></svg>
+            </div>
+        </div>
+        <div class="insight">
+            <h3>What This Graph Tells Us</h3>
+            <p>
+                This graph compares Switzerland’s average PISA scores in math, reading, and science with real per capita
+                education spending, adjusted to constant 2003 CHF.
+
+                PISA (Programme for International Student Assessment) is a global exam by the OECD that evaluates how
+                well 15-year-olds apply knowledge in reading, math, and science.
+
+                While real education spending has steadily increased, student performance has not followed the same
+                trend—math and reading scores have declined, and science scores have remained mostly flat. This suggests
+                that higher spending alone doesn’t guarantee better outcomes, highlighting the need to examine how
+                education resources are used.
+            </p>
+        </div>
     </div>
-    <div class="insight">
-      <h3>What This Graph Tells Us</h3>
-      <p>
-        This graph compares Switzerland’s average PISA scores in math, reading, and science with real per capita education spending, adjusted to constant 2003 CHF.
-        <br/><br/>
-        PISA (Programme for International Student Assessment) is a global exam by the OECD that evaluates how well 15-year-olds apply knowledge in reading, math, and science.
-        <br/><br/>
-        While real education spending has steadily increased, student performance has not followed the same trend—math and reading scores have declined, and science scores have remained mostly flat. This suggests that higher spending alone doesn’t guarantee better outcomes, highlighting the need to examine how education resources are used.
-      </p>
-    </div>
-  </div>
 
-  <div class="tooltip" id="tooltip"></div>
+    <div class="tooltip" id="tooltip"></div>
 
-  <footer>
-    &copy; 2025 Swiss Government Spending Dashboard &middot; Created by Garrett, Adien, and Jordan
-  </footer>
+    <footer>
+        &copy; 2025 Swiss Government Spending Dashboard &middot; Created by Garrett, Adien, and Jordan
+    </footer>
 
-  <script>
-    Promise.all([
-      d3.csv("swiss_pisa_summary.csv", d3.autoType),
-      d3.csv("SwissGovSpend.csv.csv", d3.autoType),
-      d3.text("WorldPopulationData.csv"),
-      d3.csv("SwissInflationData.csv", d3.autoType)
-    ]).then(([pisaData, spendRaw, popText, infData]) => {
-      const lines = popText.split("\n");
-      const headerIndex = lines.findIndex(line => line.startsWith('"Country Name"'));
-      const worldData = d3.csvParse(lines.slice(headerIndex).join("\n"));
-      const switz = worldData.find(d => d["Country Name"] === "Switzerland");
-      const popMap = {};
-      for (let y = 1995; y <= 2025; y++) {
-          popMap[y] = +switz[y];
-      }
+    <script>
+        Promise.all([
+            d3.csv("swiss_pisa_summary.csv", d3.autoType),
+            d3.csv("SwissGovSpend.csv.csv", d3.autoType),
+            d3.text("WorldPopulationData.csv"),
+            d3.csv("SwissInflationData.csv", d3.autoType)
+        ]).then(([pisaData, spendRaw, popText, infData]) => {
+            const lines = popText.split("\n");
+            const headerIndex = lines.findIndex(line => line.startsWith('"Country Name"'));
+            const worldData = d3.csvParse(lines.slice(headerIndex).join("\n"));
+            const switz = worldData.find(d => d["Country Name"] === "Switzerland");
+            const popMap = {};
+            for (let y = 1995; y <= 2025; y++) {
+                popMap[y] = +switz[y];
+            }
 
-      const eduSpend = spendRaw.filter(d =>
-          d.COFOG === "GF01" &&
-          d.UNIT_MEAS === "MCHF" &&
-          d.SECTOR === "S13"
-      ).map(d => ({
-          Year: +d.PERIOD,
-          Value: +d.VALUE,
-          Population: popMap[+d.PERIOD]
-      })).filter(d => d.Population);
+            const eduSpend = spendRaw.filter(d =>
+                d.COFOG === "GF01" &&
+                d.UNIT_MEAS === "MCHF" &&
+                d.SECTOR === "S13"
+            ).map(d => ({
+                Year: +d.PERIOD,
+                Value: +d.VALUE,
+                Population: popMap[+d.PERIOD]
+            })).filter(d => d.Population);
 
-      eduSpend.forEach(d => {
-          d.NominalPerCapita = (d.Value * 1e6) / d.Population;
-      });
+            eduSpend.forEach(d => {
+                d.NominalPerCapita = (d.Value * 1e6) / d.Population;
+            });
 
-      const inflationMap = {};
-      infData.forEach(d => {
-          inflationMap[+d["Year"]] = +d["Inflation Rate"];
-      });
+            const inflationMap = {};
+            infData.forEach(d => {
+                inflationMap[+d["Year"]] = +d["Inflation Rate"];
+            });
 
-      const baseYear = 2003;
-      const inflationIndex = {};
-      inflationIndex[baseYear] = 1.0;
-      for (let y = baseYear + 1; y <= 2025; y++) {
-          inflationIndex[y] = inflationIndex[y - 1] * (1 + (inflationMap[y] || 0) / 100);
-      }
-      for (let y = baseYear - 1; y >= 1995; y--) {
-          inflationIndex[y] = inflationIndex[y + 1] / (1 + (inflationMap[y + 1] || 0) / 100);
-      }
+            const baseYear = 2003;
+            const inflationIndex = {};
+            inflationIndex[baseYear] = 1.0;
+            for (let y = baseYear + 1; y <= 2025; y++) {
+                inflationIndex[y] = inflationIndex[y - 1] * (1 + (inflationMap[y] || 0) / 100);
+            }
+            for (let y = baseYear - 1; y >= 1995; y--) {
+                inflationIndex[y] = inflationIndex[y + 1] / (1 + (inflationMap[y + 1] || 0) / 100);
+            }
 
-      eduSpend.forEach(d => {
-          const deflator = inflationIndex[d.Year] || 1;
-          d.RealPerCapita = d.NominalPerCapita / deflator;
-      });
+            eduSpend.forEach(d => {
+                const deflator = inflationIndex[d.Year] || 1;
+                d.RealPerCapita = d.NominalPerCapita / deflator;
+            });
 
-      const merged = pisaData.map(d => {
-          const spend = eduSpend.find(e => e.Year === d.Year);
-          return spend ? {
-              ...d,
-              RealPerCapita: spend.RealPerCapita
-          } : null;
-      }).filter(d => d);
+            const merged = pisaData.map(d => {
+                const spend = eduSpend.find(e => e.Year === d.Year);
+                return spend ? {
+                    ...d,
+                    RealPerCapita: spend.RealPerCapita
+                } : null;
+            }).filter(d => d);
 
-      const svg = d3.select("svg"),
-            margin = { top: 60, right: 100, bottom: 60, left: 60 },
-            width = +svg.attr("width") - margin.left - margin.right,
-            height = +svg.attr("height") - margin.top - margin.bottom;
+            const svg = d3.select("svg"),
+                margin = { top: 60, right: 100, bottom: 60, left: 60 },
+                width = +svg.attr("width") - margin.left - margin.right,
+                height = +svg.attr("height") - margin.top - margin.bottom;
 
-      const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+            const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-      const x = d3.scaleLinear()
-          .domain(d3.extent(merged, d => d.Year))
-          .range([0, width]);
+            const x = d3.scaleLinear()
+                .domain(d3.extent(merged, d => d.Year))
+                .range([0, width]);
 
-      const yLeft = d3.scaleLinear()
-          .domain([
-              d3.min(merged, d => Math.min(d.avg_math, d.avg_read, d.avg_science)) - 5,
-              d3.max(merged, d => Math.max(d.avg_math, d.avg_read, d.avg_science)) + 5
-          ])
-          .range([height, 0]);
+            const yLeft = d3.scaleLinear()
+                .domain([
+                    d3.min(merged, d => Math.min(d.avg_math, d.avg_read, d.avg_science)) - 5,
+                    d3.max(merged, d => Math.max(d.avg_math, d.avg_read, d.avg_science)) + 5
+                ])
+                .range([height, 0]);
 
-      const yRight = d3.scaleLinear()
-          .domain([0, d3.max(merged, d => d.RealPerCapita) * 1.1])
-          .range([height, 0])
-          .nice();
+            const yRight = d3.scaleLinear()
+                .domain([0, d3.max(merged, d => d.RealPerCapita) * 1.1])
+                .range([height, 0])
+                .nice();
 
-      const color = d3.scaleOrdinal()
-          .domain(["avg_math", "avg_read", "avg_science", "RealPerCapita"])
-          .range(["steelblue", "darkorange", "green", "crimson"]);
+            const color = d3.scaleOrdinal()
+                .domain(["avg_math", "avg_read", "avg_science", "RealPerCapita"])
+                .range(["steelblue", "darkorange", "green", "crimson"]);
 
-      const line = (key, scale) => d3.line()
-          .x(d => x(d.Year))
-          .y(d => scale(d[key]));
+            const line = (key, scale) => d3.line()
+                .x(d => x(d.Year))
+                .y(d => scale(d[key]));
 
-      g.append("g")
-          .attr("transform", `translate(0,${height})`)
-          .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+            g.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
-      g.append("g")
-          .call(d3.axisLeft(yLeft))
-          .append("text")
-          .attr("x", -height / 2)
-          .attr("y", -45)
-          .attr("fill", "black")
-          .attr("text-anchor", "middle")
-          .attr("transform", "rotate(-90)")
-          .style("font-size", "16px")
-          .text("Average PISA Scores");
+            g.append("g")
+                .call(d3.axisLeft(yLeft))
+                .append("text")
+                .attr("x", -height / 2)
+                .attr("y", -45)
+                .attr("fill", "black")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .style("font-size", "16px")
+                .text("Average PISA Scores");
 
-      const yRightAxis = g.append("g")
-          .attr("transform", `translate(${width},0)`)
-          .call(d3.axisRight(yRight));
+            const yRightAxis = g.append("g")
+                .attr("transform", `translate(${width},0)`)
+                .call(d3.axisRight(yRight));
 
-      svg.append("text")
-          .attr("x", width + margin.left + 50)
-          .attr("y", height / 2 + margin.top)
-          .attr("fill", "crimson")
-          .attr("text-anchor", "middle")
-          .attr("transform", `rotate(90, ${width + margin.left + 50}, ${height / 2 + margin.top})`)
-          .style("font-size", "16px")
-          .text("Education Spending per Capita (CHF, 2003)");
+            svg.append("text")
+                .attr("x", width + margin.left + 50)
+                .attr("y", height / 2 + margin.top)
+                .attr("fill", "crimson")
+                .attr("text-anchor", "middle")
+                .attr("transform", `rotate(90, ${width + margin.left + 50}, ${height / 2 + margin.top})`)
+                .style("font-size", "16px")
+                .text("Education Spending per Capita (CHF, 2003)");
 
-      ["avg_math", "avg_read", "avg_science"].forEach(key => {
-          g.append("path")
-              .datum(merged)
-              .attr("fill", "none")
-              .attr("stroke", color(key))
-              .attr("stroke-width", 2.5)
-              .attr("d", line(key, yLeft));
-      });
+            ["avg_math", "avg_read", "avg_science"].forEach(key => {
+                g.append("path")
+                    .datum(merged)
+                    .attr("fill", "none")
+                    .attr("stroke", color(key))
+                    .attr("stroke-width", 2.5)
+                    .attr("d", line(key, yLeft));
+            });
 
-      g.append("path")
-          .datum(merged)
-          .attr("fill", "none")
-          .attr("stroke", color("RealPerCapita"))
-          .attr("stroke-width", 3)
-          .attr("stroke-dasharray", "5 3")
-          .attr("d", line("RealPerCapita", yRight));
+            g.append("path")
+                .datum(merged)
+                .attr("fill", "none")
+                .attr("stroke", color("RealPerCapita"))
+                .attr("stroke-width", 3)
+                .attr("stroke-dasharray", "5 3")
+                .attr("d", line("RealPerCapita", yRight));
 
-      svg.append("text")
-          .attr("x", svg.attr("width") / 2)
-          .attr("y", 30)
-          .attr("text-anchor", "middle")
-          .style("font-size", "20px")
-          .style("font-weight", "bold")
-          .text("Average Swiss PISA Scores vs. Real Education Spending per Capita (in 2003 CHF)");
+            svg.append("text")
+                .attr("x", svg.attr("width") / 2)
+                .attr("y", 30)
+                .attr("text-anchor", "middle")
+                .style("font-size", "20px")
+                .style("font-weight", "bold")
+                .text("Average Swiss PISA Scores vs. Real Education Spending per Capita (in 2003 CHF)");
 
-      const tooltip = d3.select("body").append("div")
-          .attr("id", "tooltip")
-          .style("position", "absolute")
-          .style("padding", "8px")
-          .style("background", "white")
-          .style("border", "1px solid #ccc")
-          .style("border-radius", "4px")
-          .style("pointer-events", "none")
-          .style("opacity", 0);
+            const tooltip = d3.select("body").append("div")
+                .attr("id", "tooltip")
+                .style("position", "absolute")
+                .style("padding", "8px")
+                .style("background", "white")
+                .style("border", "1px solid #ccc")
+                .style("border-radius", "4px")
+                .style("pointer-events", "none")
+                .style("opacity", 0);
 
-      g.selectAll(".hover-circle")
-          .data(merged)
-          .enter()
-          .append("circle")
-          .attr("cx", d => x(d.Year))
-          .attr("cy", d => yRight(d.RealPerCapita))
-          .attr("r", 3.5)
-          .attr("fill", "crimson")
-          .attr("stroke", "#333")
-          .attr("stroke-width", 1)
-          .on("mouseover", function (event, d) {
-              tooltip.transition().duration(200).style("opacity", 0.95);
-              tooltip.html(
-                  `<strong>Year:</strong> ${d.Year}<br/>
+            g.selectAll(".hover-circle")
+                .data(merged)
+                .enter()
+                .append("circle")
+                .attr("cx", d => x(d.Year))
+                .attr("cy", d => yRight(d.RealPerCapita))
+                .attr("r", 3.5)
+                .attr("fill", "crimson")
+                .attr("stroke", "#333")
+                .attr("stroke-width", 1)
+                .on("mouseover", function (event, d) {
+                    tooltip.transition().duration(200).style("opacity", 0.95);
+                    tooltip.html(
+                        `<strong>Year:</strong> ${d.Year}<br/>
    <strong>Real CHF per Cap:</strong> ${d.RealPerCapita.toFixed(2)}<br/>
    <strong>Math:</strong> ${d.avg_math.toFixed(2)}<br/>
    <strong>Reading:</strong> ${d.avg_read.toFixed(2)}<br/>
    <strong>Science:</strong> ${d.avg_science.toFixed(2)}`
-              )
-              .style("left", (event.pageX + 10) + "px")
-              .style("top", (event.pageY - 28) + "px");
-          })
-          .on("mouseout", function () {
-              tooltip.transition().duration(300).style("opacity", 0);
-          });
+                    )
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function () {
+                    tooltip.transition().duration(300).style("opacity", 0);
+                });
 
-      const labels = {
-          avg_math: "Math Score",
-          avg_read: "Reading Score",
-          avg_science: "Science Score",
-          RealPerCapita: "Real Per Capita Spending (2003 CHF)"
-      };
+            const labels = {
+                avg_math: "Math Score",
+                avg_read: "Reading Score",
+                avg_science: "Science Score",
+                RealPerCapita: "Real Per Capita Spending (2003 CHF)"
+            };
 
-      const legend = svg.append("g")
-          .attr("transform", `translate(${margin.left}, ${height + margin.top + 30})`);
+            const legend = svg.append("g")
+                .attr("transform", `translate(${margin.left}, ${height + margin.top + 30})`);
 
-      Object.keys(labels).forEach((key, i) => {
-          const xOffset = i * 200;
-          legend.append("circle")
-              .attr("cx", xOffset)
-              .attr("cy", 0)
-              .attr("r", 5)
-              .attr("fill", color(key));
-          legend.append("text")
-              .attr("x", xOffset + 10)
-              .attr("y", 4)
-              .text(labels[key])
-              .style("font-size", "13px");
-      });
-    }).catch(error => console.error("Error loading data:", error));
-  </script>
+            Object.keys(labels).forEach((key, i) => {
+                const xOffset = i * 200;
+                legend.append("circle")
+                    .attr("cx", xOffset)
+                    .attr("cy", 0)
+                    .attr("r", 5)
+                    .attr("fill", color(key));
+                legend.append("text")
+                    .attr("x", xOffset + 10)
+                    .attr("y", 4)
+                    .text(labels[key])
+                    .style("font-size", "13px");
+            });
+        }).catch(error => console.error("Error loading data:", error));
+    </script>
 </body>
+
 </html>
