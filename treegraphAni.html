@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Swiss Government Spending Dashboard - Animated Treemap</title>
@@ -11,16 +12,19 @@
       background: #f4f6f9;
       color: #333;
     }
+
     header {
       background: #2f69dd;
       color: white;
       padding: 1rem 2rem;
       text-align: center;
     }
+
     header h1 {
       margin: 0;
       font-size: 2rem;
     }
+
     .back-button {
       position: absolute;
       top: 10px;
@@ -33,32 +37,38 @@
       cursor: pointer;
       z-index: 2;
     }
+
     header p {
       margin-top: 0.5rem;
       font-weight: 300;
     }
+
     .container {
       max-width: 1200px;
       margin: 2rem auto;
       padding: 0 1rem;
     }
+
     .card {
       background: white;
       border-radius: 8px;
       padding: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       margin-bottom: 2rem;
     }
+
     .card h2 {
       margin-top: 0;
       font-size: 1.5rem;
       margin-bottom: 1rem;
       text-align: center;
     }
+
     #animated-treemap {
       display: flex;
       justify-content: center;
     }
+
     .controls {
       display: flex;
       justify-content: center;
@@ -66,12 +76,15 @@
       gap: 1rem;
       margin-top: 1rem;
     }
+
     input[type="range"] {
       width: 300px;
     }
+
     #yearLabel {
       font-size: 1rem;
     }
+
     .tooltip {
       position: absolute;
       background: white;
@@ -81,9 +94,10 @@
       pointer-events: none;
       opacity: 0;
       border-radius: 4px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       z-index: 100;
     }
+
     #playPauseBtn {
       padding: 5px 12px;
       border: none;
@@ -92,15 +106,26 @@
       border-radius: 4px;
       cursor: pointer;
     }
+
     #playPauseBtn:hover {
       background: #3a50c4;
     }
+
     svg {
       max-width: 100%;
       height: auto;
     }
+
+    .insight {
+      background: #ffffff;
+      border-left: 6px solid #4f6bed;
+      padding: 1rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
   </style>
 </head>
+
 <body>
   <header>
     <a href="SwissHomepage.html" class="back-button">&larr;</a>
@@ -116,6 +141,22 @@
         <span id="yearLabel"></span>
         <button id="playPauseBtn">Play</button>
       </div>
+    </div>
+    <div class="insight">
+      <h3>What This Graph Tells Us</h3>
+      <p>
+        This animated treemap shows how the Swiss government’s functional spending priorities have changed over time,
+        year by year.
+
+        Each box represents a major sector (e.g., health, education, defense), sized by total spending in millions of
+        CHF (MCHF). As the animation progresses, users can observe how the proportional share and absolute value of each
+        sector evolve—highlighting trends such as rising social protection costs or shifts in economic investment.
+
+        This visualization makes it easy to see which sectors dominate the budget in each year and how public priorities
+        have shifted across decades.
+
+
+      </p>
     </div>
   </div>
   <div class="tooltip" id="tooltip"></div>
@@ -261,4 +302,5 @@
     }
   </script>
 </body>
+
 </html>
